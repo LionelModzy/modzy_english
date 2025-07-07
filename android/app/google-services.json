@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "544383111794",
+    "project_id": "english-modzy",
+    "storage_bucket": "english-modzy.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:544383111794:android:43ff177fbe6470c1b6a8eb",
+        "android_client_info": {
+          "package_name": "com.example.modzy_english"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCf_3aacYcZr8WMLrDXbCAyqepI6rUeCic"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
