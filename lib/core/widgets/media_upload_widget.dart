@@ -50,6 +50,7 @@ class _MediaUploadWidgetState extends State<MediaUploadWidget> {
   PlatformFile? _selectedAudioFile;
   Uint8List? _selectedImageBytes; // For storing image bytes temporarily
   bool _isUploading = false;
+  bool _isSelecting = false; // Add lock to prevent multiple picker instances
   double _uploadProgress = 0.0;
   String? _uploadedUrl;
   String? _errorMessage;
@@ -193,7 +194,7 @@ class _MediaUploadWidgetState extends State<MediaUploadWidget> {
             ),
           ),
           child: InkWell(
-            onTap: _selectFile,
+            onTap: _isSelecting ? null : _selectFile,
             borderRadius: BorderRadius.circular(12),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -262,27 +263,27 @@ class _MediaUploadWidgetState extends State<MediaUploadWidget> {
                               fit: BoxFit.cover,
                             )
                           : Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  _getMediaIcon(),
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      _getMediaIcon(),
                                   size: 48,
                                   color: widget.primaryColor ?? AppColors.primary,
-                                ),
+                    ),
                                 const SizedBox(height: 12),
                                 Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 16),
                                   child: Text(
                                     fileName,
-                                    style: const TextStyle(
+                      style: const TextStyle(
                                       fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    textAlign: TextAlign.center,
-                                  ),
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textPrimary,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                    ),
                                 ),
                                 if (isAudio) ...[
                                   const SizedBox(height: 8),
@@ -294,15 +295,15 @@ class _MediaUploadWidgetState extends State<MediaUploadWidget> {
                                     ),
                                     child: Text(
                                       'Tệp âm thanh',
-                                      style: TextStyle(
+                              style: TextStyle(
                                         fontSize: 12,
                                         color: Colors.blue.shade700,
                                         fontWeight: FontWeight.w500,
-                                      ),
+                              ),
                                     ),
-                                  ),
-                                ],
-                              ],
+                      ),
+                    ],
+                  ],
                             ),
                 ),
               ),
@@ -577,6 +578,13 @@ class _MediaUploadWidgetState extends State<MediaUploadWidget> {
   }
 
   Future<void> _selectFile() async {
+    if (_isSelecting) return; // Prevent multiple calls
+    
+    setState(() {
+      _isSelecting = true;
+      _errorMessage = null;
+    });
+    
     try {
       if (widget.mediaType == MediaType.audio) {
         // Use file picker for audio files
@@ -590,11 +598,11 @@ class _MediaUploadWidgetState extends State<MediaUploadWidget> {
           final file = result.files.first;
           final isValid = await _validateAudioFile(file);
           if (isValid) {
-            setState(() {
+      setState(() {
               _selectedAudioFile = file;
               _selectedFile = null;
-              _errorMessage = null;
-            });
+        _errorMessage = null;
+      });
           }
         }
         return;
@@ -691,13 +699,17 @@ class _MediaUploadWidgetState extends State<MediaUploadWidget> {
             final bytes = await file.readAsBytes();
             setState(() {
               _selectedImageBytes = bytes;
-            });
+          });
           }
         }
       }
     } catch (e) {
       setState(() {
         _errorMessage = 'Lỗi khi chọn tệp: $e';
+      });
+    } finally {
+      setState(() {
+        _isSelecting = false;
       });
     }
   }

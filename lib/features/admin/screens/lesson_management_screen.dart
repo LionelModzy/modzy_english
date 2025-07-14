@@ -242,7 +242,7 @@ class _LessonManagementScreenState extends State<LessonManagementScreen> {
                 // Create Lesson Button
                 SizedBox(
                   width: double.infinity,
-                  height: 48,
+                  height: 52, // Tăng chiều cao từ 48
                   child: ElevatedButton.icon(
                     onPressed: () {
                       Navigator.of(context).push(
@@ -251,21 +251,23 @@ class _LessonManagementScreenState extends State<LessonManagementScreen> {
                         ),
                       ).then((_) => _loadLessons());
                     },
-                    icon: const Icon(Icons.add, color: AppColors.primary),
+                    icon: const Icon(Icons.add, color: AppColors.primary, size: 22), // Giảm size icon
                     label: const Text(
                       'Tạo Bài Học Mới',
                       style: TextStyle(
                         color: AppColors.primary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 17, // Tăng font size
+                        fontWeight: FontWeight.w700, // Đậm hơn
+                        letterSpacing: 0.2,
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(14), // Tăng bo góc
                       ),
                       elevation: 2,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), // Giảm padding tổng thể
                     ),
                   ),
                 ),

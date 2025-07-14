@@ -4,6 +4,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/media_upload_widget.dart';
+import '../../../core/widgets/vocabulary_selector_widget.dart';
 import '../../../core/services/lesson_service.dart';
 import '../../../core/services/cloudinary_service.dart';
 import '../../../models/lesson_model.dart';
@@ -30,7 +31,6 @@ class _CreateLessonScreenState extends State<CreateLessonScreen> with TickerProv
   final _descriptionController = TextEditingController();
   final _contentController = TextEditingController();
   final _objectivesController = TextEditingController();
-  final _vocabularyController = TextEditingController();
   final _tagsController = TextEditingController();
   
   // Lesson data
@@ -43,6 +43,7 @@ class _CreateLessonScreenState extends State<CreateLessonScreen> with TickerProv
   String? _audioUrl;
   String? _videoUrl; // Main lesson video
   List<LessonSection> _sections = [];
+  List<String> _selectedVocabularyWords = [];
   
   int _currentStep = 0;
   bool _isLoading = false;
@@ -77,7 +78,7 @@ class _CreateLessonScreenState extends State<CreateLessonScreen> with TickerProv
     _descriptionController.text = lesson.description;
     _contentController.text = lesson.content;
     _objectivesController.text = lesson.objectives.join(', ');
-    _vocabularyController.text = lesson.vocabulary.join(', ');
+    _selectedVocabularyWords = List.from(lesson.vocabulary);
     _tagsController.text = lesson.tags.join(', ');
     _selectedCategory = lesson.category;
     _difficultyLevel = lesson.difficultyLevel;
@@ -132,7 +133,6 @@ class _CreateLessonScreenState extends State<CreateLessonScreen> with TickerProv
     _descriptionController.dispose();
     _contentController.dispose();
     _objectivesController.dispose();
-    _vocabularyController.dispose();
     _tagsController.dispose();
     super.dispose();
   }
@@ -429,14 +429,16 @@ class _CreateLessonScreenState extends State<CreateLessonScreen> with TickerProv
             
             const SizedBox(height: 16),
             
-            // Vocabulary
-            CustomTextField(
-              controller: _vocabularyController,
-              label: 'Từ Vựng Chính',
-              hint: 'Nhập từ vựng cách nhau bởi dấu phẩy',
-              prefixIcon: Icons.school,
-              maxLines: 2,
-              helperText: 'Những từ quan trọng học viên sẽ học',
+            // Vocabulary Selector
+            VocabularySelector(
+              selectedVocabularyWords: _selectedVocabularyWords,
+              onVocabularyChanged: (selectedWords) {
+                setState(() {
+                  _selectedVocabularyWords = selectedWords;
+                });
+              },
+              lessonCategory: _selectedCategory,
+              difficultyLevel: _difficultyLevel,
             ),
             
             const SizedBox(height: 24),
@@ -1219,11 +1221,7 @@ class _CreateLessonScreenState extends State<CreateLessonScreen> with TickerProv
           .where((s) => s.isNotEmpty)
           .toList();
       
-      final vocabulary = _vocabularyController.text
-          .split(',')
-          .map((s) => s.trim())
-          .where((s) => s.isNotEmpty)
-          .toList();
+      final vocabulary = _selectedVocabularyWords;
       
       final tags = _tagsController.text
           .split(',')

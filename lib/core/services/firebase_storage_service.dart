@@ -132,17 +132,22 @@ class FirebaseStorageService {
       // Sync with Cloudinary if requested (non-blocking)
       if (syncWithCloudinary) {
         try {
-          cloudinaryUrl = await CloudinaryService.uploadImage(
+          final cloudinaryResult = await CloudinaryService.uploadImage(
             imageFile: imageFile,
-            folder: folder.folderName,
-            publicId: path.basenameWithoutExtension(fileName),
+            folder: CloudinaryFolder.values.firstWhere(
+              (f) => f.folderName == folder.folderName,
+              orElse: () => CloudinaryFolder.userContent,
+            ),
+            customPublicId: path.basenameWithoutExtension(fileName),
           ).timeout(
             const Duration(minutes: 2),
             onTimeout: () {
               if (kDebugMode) print('Cloudinary upload timeout - continuing with Firebase URL');
-              return null;
+              return CloudinaryUploadResult(success: false, error: 'Timeout');
             },
           );
+          
+          cloudinaryUrl = cloudinaryResult.optimizedUrl;
           
           if (kDebugMode && cloudinaryUrl != null) {
             print('Cloudinary sync successful: $cloudinaryUrl');
@@ -350,11 +355,15 @@ class FirebaseStorageService {
       // Sync with Cloudinary if requested
       if (syncWithCloudinary) {
         try {
-          cloudinaryUrl = await CloudinaryService.uploadVideo(
+          final cloudinaryResult = await CloudinaryService.uploadVideo(
             videoFile: videoFile,
-            folder: folder.folderName,
-            publicId: path.basenameWithoutExtension(fileName),
+            folder: CloudinaryFolder.values.firstWhere(
+              (f) => f.folderName == folder.folderName,
+              orElse: () => CloudinaryFolder.lessonVideos,
+            ),
+            customPublicId: path.basenameWithoutExtension(fileName),
           );
+          cloudinaryUrl = cloudinaryResult.optimizedUrl;
         } catch (e) {
           // Cloudinary upload failed, but Firebase succeeded
           if (kDebugMode) print('Cloudinary sync failed: $e');
@@ -423,11 +432,15 @@ class FirebaseStorageService {
       // Sync with Cloudinary if requested
       if (syncWithCloudinary) {
         try {
-          cloudinaryUrl = await CloudinaryService.uploadRawFile(
-            file: audioFile,
-            folder: folder.folderName,
-            publicId: path.basenameWithoutExtension(fileName),
+          final cloudinaryResult = await CloudinaryService.uploadAudio(
+            audioFile: audioFile,
+            folder: CloudinaryFolder.values.firstWhere(
+              (f) => f.folderName == folder.folderName,
+              orElse: () => CloudinaryFolder.lessonAudio,
+            ),
+            customPublicId: path.basenameWithoutExtension(fileName),
           );
+          cloudinaryUrl = cloudinaryResult.optimizedUrl;
         } catch (e) {
           if (kDebugMode) print('Cloudinary sync failed: $e');
         }

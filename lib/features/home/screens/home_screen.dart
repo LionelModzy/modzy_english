@@ -9,7 +9,7 @@ import '../../admin/screens/admin_dashboard_screen.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../lessons/screens/lessons_screen.dart';
-import '../../quiz/screens/quiz_screen.dart';
+import '../../quiz/screens/quiz_list_screen.dart';
 import '../../vocabulary/screens/vocabulary_screen.dart';
 import '../../videos/screens/video_screen.dart';
 
@@ -356,7 +356,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (context) => const QuizScreen(),
+                          builder: (context) => const QuizListScreen(),
                         ),
                       );
                     },

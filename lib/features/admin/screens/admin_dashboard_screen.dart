@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/custom_button.dart';
+import '../../../core/services/analytics_service.dart';
 import '../../../models/user_model.dart';
 import '../../auth/data/auth_repository.dart';
 import 'lesson_management_screen.dart';
 import 'media_upload_demo_screen.dart';
+import 'quiz_management_screen.dart';
 import 'vocabulary_management_screen.dart';
+import 'user_management_screen.dart';
+import 'analytics_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -17,11 +21,14 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   UserModel? currentUser;
   bool isLoading = true;
+  Map<String, dynamic> _platformStats = {};
+  bool _statsLoading = true;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _loadPlatformStatistics();
   }
 
   Future<void> _loadUserData() async {
@@ -42,12 +49,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  Future<void> _loadPlatformStatistics() async {
+    try {
+      final stats = await AnalyticsService.getPlatformStatistics();
+      if (mounted) {
+        setState(() {
+          _platformStats = stats;
+          _statsLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _statsLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Admin Dashboard'),
+          title: const Text('Bảng điều khiển Quản trị'),
           backgroundColor: AppColors.adminPrimary,
           foregroundColor: Colors.white,
         ),
@@ -61,7 +86,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     if (currentUser?.isAdmin != true) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Access Denied'),
+          title: const Text('Truy cập bị từ chối'),
           backgroundColor: AppColors.error,
           foregroundColor: Colors.white,
         ),
@@ -76,7 +101,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
               SizedBox(height: 16),
               Text(
-                'Access Denied',
+                'Truy cập bị từ chối',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -85,7 +110,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
               SizedBox(height: 8),
               Text(
-                'You do not have permission to access this area.',
+                'Bạn không có quyền truy cập khu vực này.',
                 style: TextStyle(
                   fontSize: 16,
                   color: AppColors.textSecondary,
@@ -102,7 +127,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       backgroundColor: AppColors.adminBackground,
       appBar: AppBar(
         title: const Text(
-          'Admin Dashboard',
+          'Bảng điều khiển Quản trị',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -112,6 +137,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              _loadPlatformStatistics();
+            },
+            tooltip: 'Làm mới thống kê',
+          ),
           Container(
             margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -129,7 +161,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  'Admin',
+                  'Quản trị',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 12,
@@ -181,7 +213,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Welcome, ${currentUser?.displayName ?? 'Admin'}!',
+                            'Chào mừng, ${currentUser?.displayName ?? 'Quản trị viên'}!',
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -190,7 +222,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           ),
                           const SizedBox(height: 4),
                           const Text(
-                            'Manage your English learning platform',
+                            'Quản lý nền tảng học tiếng Anh của bạn',
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.white70,
@@ -206,56 +238,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
               // Statistics Cards
               Text(
-                'Platform Statistics',
+                'Thống kê Nền tảng',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 16),
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: 1.6,
-                children: [
-                  _buildStatCard(
-                    icon: Icons.people_rounded,
-                    title: 'Total Users',
-                    value: '1,234',
-                    color: AppColors.primary,
-                    subtitle: '+12% this month',
-                  ),
-                  _buildStatCard(
-                    icon: Icons.play_lesson_rounded,
-                    title: 'Lessons',
-                    value: '89',
-                    color: AppColors.secondary,
-                    subtitle: '5 new this week',
-                  ),
-                  _buildStatCard(
-                    icon: Icons.book_rounded,
-                    title: 'Vocabulary',
-                    value: '2,156',
-                    color: AppColors.accent,
-                    subtitle: '150 words added',
-                  ),
-                  _buildStatCard(
-                    icon: Icons.videocam_rounded,
-                    title: 'Videos',
-                    value: '67',
-                    color: AppColors.success,
-                    subtitle: '3 new videos',
-                  ),
-                ],
-              ),
+              _statsLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _buildStatisticsGrid(),
               const SizedBox(height: 32),
 
               // Management Actions
               Text(
-                'Management Actions',
+                'Hành động Quản lý',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
@@ -266,23 +263,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: 1,
-                mainAxisSpacing: 16,
-                childAspectRatio: 4.5,
+                mainAxisSpacing: 12, // Reduced from 16
+                childAspectRatio: 5.5, // Increased from 5.0 to give more space
                 children: [
                   _buildActionCard(
                     icon: Icons.people_rounded,
-                    title: 'Manage Users',
-                    subtitle: 'View, edit, and manage user accounts',
+                    title: 'Quản lý Người dùng',
+                    subtitle: 'Xem, chỉnh sửa và quản lý tài khoản người dùng',
                     color: AppColors.primary,
                     onTap: () {
-                      // TODO: Navigate to user management
-                      _showComingSoonDialog('User Management');
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const UserManagementScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildActionCard(
                     icon: Icons.library_books_rounded,
-                    title: 'Lesson Management',
-                    subtitle: 'Create, edit, and organize lessons with rich content',
+                    title: 'Quản lý Bài học',
+                    subtitle: 'Tạo, chỉnh sửa, tổ chức bài học', // Rút gọn subtitle
                     color: AppColors.secondary,
                     onTap: () {
                       Navigator.of(context).push(
@@ -294,8 +294,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                   _buildActionCard(
                     icon: Icons.book_rounded,
-                    title: 'Vocabulary Management',
-                    subtitle: 'Manage vocabulary words with audio pronunciation',
+                    title: 'Quản lý Từ vựng',
+                    subtitle: 'Quản lý từ vựng với phát âm bằng giọng nói',
                     color: const Color(0xFF06B6D4),
                     onTap: () {
                       Navigator.of(context).push(
@@ -306,9 +306,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     },
                   ),
                   _buildActionCard(
+                    icon: Icons.quiz_rounded,
+                    title: 'Quản lý Quiz',
+                    subtitle: 'Tạo và quản lý bài kiểm tra thực hành cho người dùng',
+                    color: const Color(0xFF8B5CF6),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const QuizManagementScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildActionCard(
                     icon: Icons.video_library_rounded,
-                    title: 'Media Upload System',
-                    subtitle: 'Firebase Storage + Cloudinary integration demo',
+                    title: 'Hệ thống Tải lên Media',
+                    subtitle: 'Demo tích hợp Firebase Storage + Cloudinary',
                     color: AppColors.accent,
                     onTap: () {
                       Navigator.of(context).push(
@@ -320,22 +333,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                   _buildActionCard(
                     icon: Icons.analytics_rounded,
-                    title: 'Analytics',
-                    subtitle: 'View platform statistics and user progress',
+                    title: 'Phân tích & Thống kê',
+                    subtitle: 'Xem thống kê nền tảng và tiến độ người dùng',
                     color: AppColors.success,
                     onTap: () {
-                      // TODO: Navigate to analytics
-                      _showComingSoonDialog('Analytics');
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const AnalyticsScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildActionCard(
                     icon: Icons.settings_rounded,
-                    title: 'System Settings',
-                    subtitle: 'Configure app settings and preferences',
+                    title: 'Cài đặt Hệ thống',
+                    subtitle: 'Cấu hình cài đặt ứng dụng và tùy chọn',
                     color: AppColors.adminPrimary,
                     onTap: () {
-                      // TODO: Navigate to settings
-                      _showComingSoonDialog('System Settings');
+                      _showComingSoonDialog('Cài đặt Hệ thống');
                     },
                   ),
                 ],
@@ -347,6 +362,73 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  Widget _buildStatisticsGrid() {
+    final users = _platformStats['users'] as Map<String, dynamic>? ?? {};
+    final lessons = _platformStats['lessons'] as Map<String, dynamic>? ?? {};
+    final quizzes = _platformStats['quizzes'] as Map<String, dynamic>? ?? {};
+    final vocabulary = _platformStats['vocabulary'] as Map<String, dynamic>? ?? {};
+
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      mainAxisSpacing: 8, // Reduced from 12
+      crossAxisSpacing: 8, // Reduced from 12
+      childAspectRatio: 1.8, // Increased from 1.6 to give even more space
+      children: [
+        _buildStatCard(
+          icon: Icons.people_rounded,
+          title: 'Tổng Người dùng',
+          value: '${users['total'] ?? 0}',
+          color: AppColors.primary,
+          subtitle: '+${users['newThisMonth'] ?? 0} tháng này',
+        ),
+        _buildStatCard(
+          icon: Icons.verified_user_rounded,
+          title: 'Đang hoạt động',
+          value: '${users['active'] ?? 0}',
+          color: AppColors.success,
+          subtitle: '${_calculateActivePercentage(users)}% tổng số',
+        ),
+        _buildStatCard(
+          icon: Icons.book_rounded,
+          title: 'Bài học',
+          value: '${lessons['total'] ?? 0}',
+          color: AppColors.secondary,
+          subtitle: '${lessons['totalCompletions'] ?? 0} lượt hoàn thành',
+        ),
+        _buildStatCard(
+          icon: Icons.quiz_rounded,
+          title: 'Quiz',
+          value: '${quizzes['total'] ?? 0}',
+          color: const Color(0xFF8B5CF6),
+          subtitle: 'Tỉ lệ đạt: ${(quizzes['passRate'] ?? 0.0).toStringAsFixed(1)}%',
+        ),
+        _buildStatCard(
+          icon: Icons.library_books_rounded,
+          title: 'Từ vựng',
+          value: '${vocabulary['total'] ?? 0}',
+          color: AppColors.accent,
+          subtitle: '+${vocabulary['newThisMonth'] ?? 0} tháng này',
+        ),
+        _buildStatCard(
+          icon: Icons.trending_up_rounded,
+          title: 'Tiến độ TB',
+          value: '${(users['averageProgress'] ?? 0.0).toStringAsFixed(1)}%',
+          color: AppColors.warning,
+          subtitle: 'Của tất cả người dùng',
+        ),
+      ],
+    );
+  }
+
+  String _calculateActivePercentage(Map<String, dynamic> users) {
+    final total = users['total'] ?? 0;
+    final active = users['active'] ?? 0;
+    if (total == 0) return '0';
+    return ((active / total) * 100).toStringAsFixed(0);
+  }
+
   Widget _buildStatCard({
     required IconData icon,
     required String title,
@@ -355,16 +437,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     required String subtitle,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(8), // Reduced from 10
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.2), width: 2),
+        borderRadius: BorderRadius.circular(12), // Reduced from 16
+        border: Border.all(color: color.withOpacity(0.2), width: 1), // Reduced border width
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.1),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+            color: color.withOpacity(0.06), // Reduced opacity
+            blurRadius: 6, // Reduced from 8
+            offset: const Offset(0, 2), // Reduced from 4
           ),
         ],
       ),
@@ -372,54 +454,63 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 20,
-                ),
-              ),
-              const Spacer(),
-              Flexible(
-                child: Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: color,
+          Flexible( // Added Flexible wrapper
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(4), // Reduced from 5
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4), // Reduced from 6
                   ),
-                  overflow: TextOverflow.ellipsis,
+                  child: Icon(
+                    icon,
+                    color: color,
+                    size: 12, // Reduced from 14
+                  ),
                 ),
+                const SizedBox(width: 4), // Reduced from 6
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      value,
+                      style: TextStyle(
+                        fontSize: 12, // Reduced from 14
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 2), // Reduced from 3
+          Flexible( // Added Flexible wrapper
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 9, // Reduced from 10
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
               ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 1),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              fontSize: 10,
-              color: AppColors.textSecondary,
+          const SizedBox(height: 1), // Keep at 1
+          Flexible( // Added Flexible wrapper
+            child: Text(
+              subtitle,
+              style: const TextStyle(
+                fontSize: 7, // Reduced from 8
+                color: AppColors.textSecondary,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -433,58 +524,58 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     required Color color,
     required VoidCallback onTap,
   }) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12), // Reduced from 16
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.2), width: 2),
+          borderRadius: BorderRadius.circular(12), // Reduced from 16
+          border: Border.all(color: color.withOpacity(0.2), width: 1),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.1),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
+              color: color.withOpacity(0.06), // Reduced opacity
+              blurRadius: 8, // Reduced from 12
+              offset: const Offset(0, 2), // Reduced from 4
             ),
           ],
         ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(8), // Reduced from 10
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(8), // Reduced from 10
               ),
               child: Icon(
                 icon,
                 color: color,
-                size: 24,
+                size: 18, // Reduced from 20
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 10), // Reduced from 12
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min, // Added to prevent overflow
                 children: [
                   Text(
                     title,
                     style: const TextStyle(
-                      fontSize: 15,
+                      fontSize: 14, // Reduced from 15
                       fontWeight: FontWeight.bold,
                       color: AppColors.textPrimary,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 1), // Reduced from 2
                   Text(
                     subtitle,
                     style: const TextStyle(
-                      fontSize: 13,
+                      fontSize: 11, // Reduced from 12
                       color: AppColors.textSecondary,
                     ),
                     maxLines: 2,
@@ -493,10 +584,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ],
               ),
             ),
-            Icon(
+            const Icon(
               Icons.arrow_forward_ios_rounded,
-              color: color,
-              size: 18,
+              color: AppColors.textSecondary,
+              size: 14, // Reduced from 16
             ),
           ],
         ),
@@ -507,42 +598,50 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void _showComingSoonDialog(String feature) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Row(
-          children: [
-            Icon(
-              Icons.construction_rounded,
-              color: AppColors.warning,
-              size: 28,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.construction_rounded,
+                color: AppColors.warning,
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Sắp ra mắt',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            '$feature hiện đang được phát triển. Tính năng này sẽ có sẵn trong bản cập nhật tương lai.',
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary,
             ),
-            const SizedBox(width: 12),
-            const Text(
-              'Coming Soon',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primary,
+              ),
+              child: const Text(
+                'Đồng ý',
+                style: TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
           ],
-        ),
-        content: Text(
-          '$feature is currently under development and will be available in a future update.',
-          style: const TextStyle(
-            color: AppColors.textSecondary,
-          ),
-        ),
-        actions: [
-          CustomButton(
-            text: 'OK',
-            onPressed: () => Navigator.of(context).pop(),
-            width: 80,
-            height: 40,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 } 

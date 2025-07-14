@@ -24,18 +24,32 @@ class AuthRepository {
       );
 
       if (userCredential != null && userCredential.user != null) {
-        // Update last login time
-        await FirebaseService.updateUserDocument(
-          uid: userCredential.user!.uid,
-          userData: {
-            'lastLoginAt': DateTime.now(),
-          },
-        );
-
-        // Get user data from Firestore
+        // Get user data from Firestore to check account status
         final userDoc = await FirebaseService.getUserDocument(userCredential.user!.uid);
+        
         if (userDoc.exists) {
-          return UserModel.fromFirestore(userDoc);
+          final userData = UserModel.fromFirestore(userDoc);
+          
+          // Check if user account is active
+          if (!userData.isActive) {
+            // Sign out the user immediately
+            await FirebaseService.signOut();
+            Fluttertoast.showToast(
+              msg: 'Tài khoản của bạn đã bị tạm dừng. Vui lòng liên hệ quản trị viên.',
+              toastLength: Toast.LENGTH_LONG,
+            );
+            throw Exception('Tài khoản đã bị tạm dừng');
+          }
+          
+          // Update last login time only if account is active
+          await FirebaseService.updateUserDocument(
+            uid: userCredential.user!.uid,
+            userData: {
+              'lastLoginAt': DateTime.now(),
+            },
+          );
+
+          return userData;
         }
       }
       return null;
@@ -121,7 +135,20 @@ class AuthRepository {
       if (user != null) {
         final userDoc = await FirebaseService.getUserDocument(user.uid);
         if (userDoc.exists) {
-          return UserModel.fromFirestore(userDoc);
+          final userData = UserModel.fromFirestore(userDoc);
+          
+          // Check if user account is still active
+          if (!userData.isActive) {
+            // Sign out the user if account has been deactivated
+            await signOut();
+            Fluttertoast.showToast(
+              msg: 'Tài khoản của bạn đã bị tạm dừng. Vui lòng liên hệ quản trị viên.',
+              toastLength: Toast.LENGTH_LONG,
+            );
+            return null;
+          }
+          
+          return userData;
         }
       }
       return null;

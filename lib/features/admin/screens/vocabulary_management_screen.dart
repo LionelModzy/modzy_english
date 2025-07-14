@@ -1,12 +1,18 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/media_upload_widget.dart';
 import '../../../core/services/vocabulary_service.dart';
 import '../../../core/services/cloudinary_service.dart';
+import '../../../core/services/dictionary_api_service.dart';
+import '../../../core/services/pexels_api_service.dart';
+import '../../../core/services/translation_service.dart';
 import '../../../models/vocab_model.dart';
 import '../../auth/data/auth_repository.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class VocabularyManagementScreen extends StatefulWidget {
   const VocabularyManagementScreen({super.key});
@@ -390,13 +396,13 @@ class _VocabularyManagementScreenState extends State<VocabularyManagementScreen>
             ],
           ),
         ),
-        title: Row(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
                     vocabulary.word,
                     style: const TextStyle(
                       fontSize: 16,
@@ -406,40 +412,38 @@ class _VocabularyManagementScreenState extends State<VocabularyManagementScreen>
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  if (vocabulary.pronunciation.isNotEmpty)
-                    Text(
-                      vocabulary.pronunciation,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                        fontStyle: FontStyle.italic,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _getCategoryColor(vocabulary.category).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(
-                  _categoryVietnamese[vocabulary.category] ?? vocabulary.category,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: _getCategoryColor(vocabulary.category),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: _getCategoryColor(vocabulary.category).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  child: Text(
+                    _categoryVietnamese[vocabulary.category] ?? vocabulary.category,
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                      color: _getCategoryColor(vocabulary.category),
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
+            if (vocabulary.pronunciation.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Text(
+                vocabulary.pronunciation,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                  fontStyle: FontStyle.italic,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ],
         ),
         subtitle: Column(
@@ -639,6 +643,14 @@ class _VocabularyFormWidgetState extends State<VocabularyFormWidget> {
   String? _audioUrl;
   String? _imageUrl;
   bool _isLoading = false;
+  bool _isAutoFetching = false;
+  Timer? _debounceTimer;
+  
+  // Auto-fetch controls
+  String? _autoFetchedImageUrl;
+  String? _autoFetchedAudioUrl;
+  bool _useAutoImage = false;
+  bool _useAutoAudio = false;
 
   final List<String> _categories = ['Grammar', 'Vocabulary', 'Speaking', 'Listening', 'Writing'];
   final List<String> _partsOfSpeech = ['noun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction', 'interjection', 'pronoun'];
@@ -665,10 +677,17 @@ class _VocabularyFormWidgetState extends State<VocabularyFormWidget> {
     _difficultyLevel = vocabulary.difficultyLevel;
     _audioUrl = vocabulary.audioUrl;
     _imageUrl = vocabulary.imageUrl;
+    
+    // Reset auto-fetch states when editing existing word
+    _autoFetchedImageUrl = null;
+    _autoFetchedAudioUrl = null;
+    _useAutoImage = false;
+    _useAutoAudio = false;
   }
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _wordController.dispose();
     _pronunciationController.dispose();
     _meaningController.dispose();
@@ -679,11 +698,329 @@ class _VocabularyFormWidgetState extends State<VocabularyFormWidget> {
     super.dispose();
   }
 
+  void _debounceAutoFetch(String word) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(seconds: 1), () {
+      _autoFetchWordData(word);
+    });
+  }
+
+  Future<void> _autoFetchWordData(String word) async {
+    if (_isAutoFetching || word.trim().isEmpty) return;
+    
+    setState(() => _isAutoFetching = true);
+
+    try {
+      // Only check for duplicates if we're creating a new word (not editing)
+      if (widget.vocabulary == null) {
+        final existingWord = await VocabularyService.checkWordExists(word);
+        if (existingWord != null && existingWord.meaning.isNotEmpty) {
+          setState(() => _isAutoFetching = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('⚠️ Từ "${word}" đã tồn tại. Nhấn để chỉnh sửa.'),
+              backgroundColor: Colors.orange,
+              action: SnackBarAction(
+                label: 'Xem',
+                textColor: Colors.white,
+                onPressed: () => _showExistingWordDialog(existingWord),
+              ),
+            ),
+          );
+          return;
+        }
+      }
+
+      // Fetch from Dictionary API and Pexels in parallel
+      final List<dynamic> results = await Future.wait([
+        DictionaryApiService.fetchWordData(word),
+        PexelsApiService.searchImageForWord(word),
+      ]);
+
+      final DictionaryWordData? dictData = results[0];
+      final String? imageUrl = results[1];
+
+      if (dictData != null) {
+        // Auto-translate definition to Vietnamese
+        String? vietnameseMeaning;
+        try {
+          vietnameseMeaning = await TranslationService.translateToVietnamese(dictData.primaryDefinition);
+        } catch (e) {
+          if (kDebugMode) print('Translation failed: $e');
+        }
+
+        // Auto-detect category from part of speech and definition
+        final detectedCategory = TranslationService.detectCategory(
+          dictData.primaryPartOfSpeech, 
+          word, 
+          dictData.primaryDefinition
+        );
+
+        // Auto-fill form with fetched data
+        _pronunciationController.text = dictData.bestPhonetic;
+        _definitionController.text = dictData.primaryDefinition;
+        _examplesController.text = dictData.allExamples.join('\n');
+        _synonymsController.text = dictData.allSynonyms.join(', ');
+        _antonymsController.text = dictData.allAntonyms.join(', ');
+        
+        // Fill Vietnamese meaning if translation succeeded
+        if (vietnameseMeaning != null && vietnameseMeaning.isNotEmpty) {
+          _meaningController.text = vietnameseMeaning;
+        }
+        
+        // Set part of speech, category, and URLs
+        setState(() {
+          _selectedPartOfSpeech = dictData.primaryPartOfSpeech.toLowerCase();
+          _selectedCategory = detectedCategory;
+          _autoFetchedAudioUrl = dictData.bestAudioUrl;
+          _autoFetchedImageUrl = imageUrl;
+          _useAutoAudio = dictData.bestAudioUrl != null;
+          _useAutoImage = imageUrl != null;
+          
+          // Set final URLs based on user choice
+          _audioUrl = _useAutoAudio ? _autoFetchedAudioUrl : null;
+          _imageUrl = _useAutoImage ? _autoFetchedImageUrl : null;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Đã tìm thấy dữ liệu cho từ "${word}"'),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else {
+        // If dictionary API fails, just set image
+        if (imageUrl != null) {
+          setState(() {
+            _imageUrl = imageUrl;
+          });
+        }
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('⚠️ Không tìm thấy từ "${word}" trong từ điển. Vui lòng nhập thủ công.'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Lỗi tìm kiếm từ điển: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      setState(() => _isAutoFetching = false);
+    }
+  }
+
   String _generateAudioFileName() {
     final word = _wordController.text.trim().replaceAll(' ', '_').toLowerCase();
     final category = _selectedCategory.toLowerCase();
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     return '${category}_vocab_${word}_audio_$timestamp';
+  }
+
+  void _showExistingWordDialog(VocabularyModel existingWord) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Từ Đã Tồn Tại'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Từ "${existingWord.word}" đã có trong hệ thống:'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Nghĩa: ${existingWord.meaning}'),
+                  if (existingWord.pronunciation.isNotEmpty)
+                    Text('Phát âm: ${existingWord.pronunciation}'),
+                  Text('Danh mục: ${existingWord.category}'),
+                  Text('Độ khó: ${existingWord.vietnameseDifficultyName}'),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Đóng'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Populate form with existing word data for editing
+              _populateFields(existingWord);
+            },
+            child: const Text('Chỉnh Sửa'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAutoImageControl() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text(
+              'Ảnh minh họa:',
+              style: TextStyle(fontSize: 11, color: AppColors.textSecondary), // Giảm font size
+            ),
+            const Spacer(),
+            Switch(
+              value: _useAutoImage,
+              onChanged: (value) {
+                setState(() {
+                  _useAutoImage = value;
+                  _imageUrl = value ? _autoFetchedImageUrl : null;
+                });
+              },
+              activeColor: AppColors.success,
+            ),
+          ],
+        ),
+        const SizedBox(height: 2), // Giảm spacing
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Stack(
+            children: [
+              Image.network(
+                _autoFetchedImageUrl!,
+                height: 70, // Giảm từ 80
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 70,
+                    color: Colors.grey[200],
+                    child: const Icon(Icons.broken_image, size: 18), // Giảm icon size
+                  );
+                },
+              ),
+              if (!_useAutoImage)
+                Container(
+                  height: 70,
+                  width: double.infinity,
+                  color: Colors.black.withOpacity(0.6),
+                  child: const Center(
+                    child: Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 18, // Giảm icon size
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAutoAudioControl() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text(
+              'Âm thanh phát âm:',
+              style: TextStyle(fontSize: 11, color: AppColors.textSecondary), // Giảm font size
+            ),
+            const Spacer(),
+            Switch(
+              value: _useAutoAudio,
+              onChanged: (value) {
+                setState(() {
+                  _useAutoAudio = value;
+                  _audioUrl = value ? _autoFetchedAudioUrl : null;
+                });
+              },
+              activeColor: AppColors.success,
+            ),
+          ],
+        ),
+        const SizedBox(height: 2), // Giảm spacing
+        GestureDetector(
+          onTap: () => _playAutoAudio(),
+          child: Container(
+            height: 56, // Giảm từ 80
+            padding: const EdgeInsets.all(10), // Giảm padding
+            decoration: BoxDecoration(
+              color: _useAutoAudio 
+                  ? Colors.blue.withOpacity(0.1) 
+                  : Colors.grey.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: _useAutoAudio 
+                    ? Colors.blue.withOpacity(0.3) 
+                    : Colors.grey.withOpacity(0.3)
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  _useAutoAudio ? Icons.volume_up : Icons.volume_off,
+                  color: _useAutoAudio ? Colors.blue : Colors.grey,
+                  size: 18, // Giảm icon size
+                ),
+                const SizedBox(height: 2), // Giảm spacing
+                Text(
+                  _useAutoAudio ? 'Nhấn để nghe' : 'Đã tắt',
+                  style: TextStyle(
+                    fontSize: 9, // Giảm font size
+                    color: _useAutoAudio ? Colors.blue[700] : Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _playAutoAudio() async {
+    if (_autoFetchedAudioUrl == null) return;
+
+    try {
+      final audioPlayer = AudioPlayer();
+      await audioPlayer.play(UrlSource(_autoFetchedAudioUrl!));
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('🔊 Đang phát âm thanh...'),
+          backgroundColor: Colors.blue,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Không thể phát âm thanh: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   @override
@@ -710,17 +1047,60 @@ class _VocabularyFormWidgetState extends State<VocabularyFormWidget> {
               children: [
                 Expanded(
                   flex: 2,
-                  child: CustomTextField(
-                    controller: _wordController,
-                    label: 'Từ Vựng *',
-                    hint: 'Nhập từ vựng tiếng Anh',
-                    prefixIcon: Icons.text_fields_rounded,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Vui lòng nhập từ vựng';
-                      }
-                      return null;
-                    },
+                  child: Column(
+                    children: [
+                      CustomTextField(
+                        controller: _wordController,
+                        label: 'Từ Vựng *',
+                        hint: 'Nhập từ vựng tiếng Anh',
+                        prefixIcon: Icons.text_fields_rounded,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Vui lòng nhập từ vựng';
+                          }
+                          return null;
+                        },
+                        onChanged: (value) {
+                          // Auto fetch when user stops typing for 1 second
+                          if (value.trim().isNotEmpty && widget.vocabulary == null) {
+                            _debounceAutoFetch(value.trim());
+                          }
+                        },
+                      ),
+                      if (_isAutoFetching)
+                        Container(
+                          margin: const EdgeInsets.only(top: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  'Tìm kiếm...',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.primary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -731,6 +1111,52 @@ class _VocabularyFormWidgetState extends State<VocabularyFormWidget> {
                     label: 'Phát Âm',
                     hint: '/ˈhæpɪ/',
                     prefixIcon: Icons.record_voice_over_rounded,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Auto-fetch button
+                SizedBox(
+                  width: 80,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'Auto',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 56,
+                        width: 56,
+                        child: ElevatedButton(
+                          onPressed: _isAutoFetching 
+                              ? null 
+                              : () => _autoFetchWordData(_wordController.text.trim()),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: EdgeInsets.zero,
+                          ),
+                          child: _isAutoFetching
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : const Icon(Icons.auto_fix_high_rounded, size: 18),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -826,14 +1252,16 @@ class _VocabularyFormWidgetState extends State<VocabularyFormWidget> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Row(
-                  children: List.generate(5, (index) {
-                    final level = index + 1;
-                    final isSelected = _difficultyLevel == level;
-                    return Expanded(
-                      child: GestureDetector(
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: List.generate(5, (index) {
+                      final level = index + 1;
+                      final isSelected = _difficultyLevel == level;
+                      return GestureDetector(
                         onTap: () => setState(() => _difficultyLevel = level),
                         child: Container(
+                          width: 60,
                           margin: EdgeInsets.only(right: index < 4 ? 8 : 0),
                           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
                           decoration: BoxDecoration(
@@ -849,67 +1277,115 @@ class _VocabularyFormWidgetState extends State<VocabularyFormWidget> {
                               Text(
                                 '$level',
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                   color: isSelected ? Colors.white : AppColors.textSecondary,
                                 ),
                               ),
                               const SizedBox(height: 2),
-                              Flexible(
-                                child: Text(
-                                  _difficultyNames[index],
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    color: isSelected ? Colors.white : AppColors.textSecondary,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.center,
+                              Text(
+                                _difficultyNames[index],
+                                style: TextStyle(
+                                  fontSize: 8,
+                                  color: isSelected ? Colors.white : AppColors.textSecondary,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
                               ),
                             ],
                           ),
                         ),
-                      ),
-                    );
-                  }),
+                      );
+                    }),
+                  ),
                 ),
               ],
             ),
             
             const SizedBox(height: 24),
             
-            // Audio Upload
-            MediaUploadWidget(
-              title: 'Âm Thanh Phát Âm',
-              description: 'Tải lên file âm thanh phát âm cho từ vựng này (MP3, WAV, M4A)',
-              mediaType: MediaType.audio,
-              folder: CloudinaryFolder.lessonAudio,
-              maxSizeMB: 10,
-              allowedExtensions: ['mp3', 'wav', 'm4a', 'aac'],
-              customFileNamePrefix: _generateAudioFileName(),
-              customIcon: const Icon(Icons.mic_rounded, color: Colors.blue),
-              primaryColor: Colors.blue,
-              onUploadComplete: (result) {
-                setState(() {
-                  _audioUrl = result.optimizedUrl;
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('🎵 Âm thanh đã được tải lên thành công!'),
-                    backgroundColor: AppColors.success,
-                  ),
-                );
-              },
-              onError: (error) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Tải lên âm thanh thất bại: $error'),
-                    backgroundColor: AppColors.error,
-                  ),
-                );
-              },
-            ),
+            // Auto-fetched content preview
+            if (_autoFetchedImageUrl != null || _autoFetchedAudioUrl != null) ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.success.withOpacity(0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.auto_awesome, color: AppColors.success, size: 20),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Nội dung tự động tìm thấy',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.success,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        if (_autoFetchedImageUrl != null) ...[
+                          Expanded(
+                            child: _buildAutoImageControl(),
+                          ),
+                          if (_autoFetchedAudioUrl != null) const SizedBox(width: 8), // Giảm spacing
+                        ],
+                        if (_autoFetchedAudioUrl != null) ...[
+                          Expanded(
+                            child: _buildAutoAudioControl(),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            
+            // Audio Upload (only show if not using auto audio)
+            if (!_useAutoAudio) ...[
+              MediaUploadWidget(
+                title: 'Âm Thanh Phát Âm',
+                description: 'Tải lên file âm thanh phát âm cho từ vựng này (MP3, WAV, M4A)',
+                mediaType: MediaType.audio,
+                folder: CloudinaryFolder.lessonAudio,
+                maxSizeMB: 10,
+                allowedExtensions: ['mp3', 'wav', 'm4a', 'aac'],
+                customFileNamePrefix: _generateAudioFileName(),
+                customIcon: const Icon(Icons.mic_rounded, color: Colors.blue),
+                primaryColor: Colors.blue,
+                onUploadComplete: (result) {
+                  setState(() {
+                    _audioUrl = result.optimizedUrl;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('🎵 Âm thanh đã được tải lên thành công!'),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                },
+                onError: (error) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Tải lên âm thanh thất bại: $error'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                },
+              ),
+            ],
             
             const SizedBox(height: 24),
             
@@ -1020,15 +1496,13 @@ class _VocabularyFormWidgetState extends State<VocabularyFormWidget> {
         metadata: widget.vocabulary?.metadata ?? {},
       );
       
-      final success = await VocabularyService.saveVocabulary(vocabulary);
+      final result = await VocabularyService.saveVocabulary(vocabulary);
       
-      if (success) {
+      if (result['success'] == true) {
         widget.onSaved();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(widget.vocabulary != null 
-                ? '✅ Đã cập nhật từ vựng "${vocabulary.word}"'
-                : '✅ Đã thêm từ vựng "${vocabulary.word}"'),
+            content: Text(result['message']),
             backgroundColor: AppColors.success,
           ),
         );
@@ -1047,7 +1521,26 @@ class _VocabularyFormWidgetState extends State<VocabularyFormWidget> {
             _audioUrl = null;
             _imageUrl = null;
             _difficultyLevel = 1;
+            
+            // Reset auto-fetch states
+            _autoFetchedImageUrl = null;
+            _autoFetchedAudioUrl = null;
+            _useAutoImage = false;
+            _useAutoAudio = false;
           });
+        }
+      } else {
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Lỗi không xác định'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        
+        // If word exists, offer to view/edit existing word
+        if (result['existingWord'] != null) {
+          _showExistingWordDialog(result['existingWord']);
         }
       }
     } catch (e) {
@@ -1075,45 +1568,80 @@ class VocabularyFormDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Container(
-        width: MediaQuery.of(context).size.width * 0.9,
-        height: MediaQuery.of(context).size.height * 0.8,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'Chỉnh Sửa Từ Vựng',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+    
+    if (isSmallScreen) {
+      // Full screen dialog for mobile
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          title: const Text(
+            'Chỉnh Sửa Từ Vựng',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          backgroundColor: AppColors.adminPrimary,
+          foregroundColor: Colors.white,
+          leading: IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.close_rounded, color: Colors.white),
+          ),
+        ),
+        body: SafeArea(
+          child: VocabularyFormWidget(
+            vocabulary: vocabulary,
+            onSaved: () {
+              Navigator.pop(context);
+              onSaved();
+            },
+          ),
+        ),
+      );
+    } else {
+      // Dialog for larger screens
+      return Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.9,
+          height: MediaQuery.of(context).size.height * 0.9,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Chỉnh Sửa Từ Vựng',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close_rounded),
-                ),
-              ],
-            ),
-            const Divider(),
-            Expanded(
-              child: VocabularyFormWidget(
-                vocabulary: vocabulary,
-                onSaved: () {
-                  Navigator.pop(context);
-                  onSaved();
-                },
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
               ),
-            ),
-          ],
+              const Divider(),
+              Expanded(
+                child: VocabularyFormWidget(
+                  vocabulary: vocabulary,
+                  onSaved: () {
+                    Navigator.pop(context);
+                    onSaved();
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 }

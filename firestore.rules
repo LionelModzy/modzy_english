@@ -1,0 +1,116 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user owns the document
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      // Allow read/write for the user themselves
+      allow read, write: if isOwner(userId);
+      // Allow admin to read/write all users
+      allow read, write: if isAdmin();
+      
+      // User subcollections - favorites
+      match /favorites/{favoriteId} {
+        allow read, write: if isOwner(userId);
+        allow read: if isAdmin();
+      }
+      
+      // User subcollections - bookmarks
+      match /bookmarks/{bookmarkId} {
+        allow read, write: if isOwner(userId);
+        allow read: if isAdmin();
+      }
+      
+      // User subcollections - lesson_progress
+      match /lesson_progress/{progressId} {
+        allow read, write: if isOwner(userId);
+        allow read: if isAdmin();
+      }
+      
+      // User subcollections - general_progress
+      match /general_progress/{progressId} {
+        allow read, write: if isOwner(userId);
+        allow read: if isAdmin();
+      }
+      
+      // User subcollections - vocabulary_progress
+      match /vocabulary_progress/{progressId} {
+        allow read, write: if isOwner(userId);
+        allow read: if isAdmin();
+      }
+    }
+
+    // Lessons collection
+    match /lessons/{lessonId} {
+      // Allow read for authenticated users
+      allow read: if isAuthenticated();
+      // Allow write for admin only
+      allow write: if isAdmin();
+    }
+
+    // Vocabulary collection
+    match /vocabulary/{vocabId} {
+      // Allow read for authenticated users
+      allow read: if isAuthenticated();
+      // Allow write for admin only
+      allow write: if isAdmin();
+    }
+
+    // Quizzes collection
+    match /quizzes/{quizId} {
+      // Allow read for authenticated users (active quizzes)
+      allow read: if isAuthenticated();
+      // Allow write for admin only
+      allow write: if isAdmin();
+    }
+
+    // Quiz results collection
+    match /quiz_results/{resultId} {
+      // Allow read/write for authenticated users when creating their own results
+      allow create: if isAuthenticated();
+      // Allow read/write for the user who owns the result
+      allow read, write: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Allow admin to read/write all quiz results for analytics
+      allow read, write: if isAdmin();
+    }
+
+    // Lesson notes collection (top-level)
+    match /lesson_notes/{noteId} {
+      // Allow read/write for authenticated users when creating their own notes
+      allow create: if isAuthenticated();
+      // Allow read/write for the user who owns the note
+      allow read, write: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Allow admin to read/write for management
+      allow read, write: if isAdmin();
+    }
+
+    // Videos collection (if exists)
+    match /videos/{videoId} {
+      // Allow read for authenticated users
+      allow read: if isAuthenticated();
+      // Allow write for admin only
+      allow write: if isAdmin();
+    }
+
+    // Allow admin to read/write any collection for comprehensive management
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

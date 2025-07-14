@@ -13,6 +13,7 @@ class LessonMediaWidget extends StatefulWidget {
   final VoidCallback? onTap;
   final bool enableAutoPlay;
   final bool showControls;
+  final Function(double progress, Duration position, Duration total)? onProgressUpdate;
   
   const LessonMediaWidget({
     super.key,
@@ -25,13 +26,14 @@ class LessonMediaWidget extends StatefulWidget {
     this.onTap,
     this.enableAutoPlay = false,
     this.showControls = true,
+    this.onProgressUpdate,
   });
 
   @override
-  State<LessonMediaWidget> createState() => _LessonMediaWidgetState();
+  State<LessonMediaWidget> createState() => LessonMediaWidgetState();
 }
 
-class _LessonMediaWidgetState extends State<LessonMediaWidget> {
+class LessonMediaWidgetState extends State<LessonMediaWidget> {
   VideoPlayerController? _videoController;
   AudioPlayer? _audioPlayer;
   bool _isVideoPlaying = false;
@@ -63,12 +65,24 @@ class _LessonMediaWidgetState extends State<LessonMediaWidget> {
 
   Future<void> _initializeVideo() async {
     try {
+      setState(() => _isLoading = true);
+      
       _videoController = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl!));
       await _videoController!.initialize();
       
       _videoController!.addListener(() {
         setState(() {
           _isVideoPlaying = _videoController!.value.isPlaying;
+          
+          // Update progress
+          if (_videoController!.value.isInitialized && _videoController!.value.duration.inSeconds > 0) {
+            final position = _videoController!.value.position;
+            final duration = _videoController!.value.duration;
+            final progress = position.inSeconds / duration.inSeconds;
+            if (widget.onProgressUpdate != null) {
+              widget.onProgressUpdate!(progress.clamp(0.0, 1.0), position, duration);
+            }
+          }
         });
       });
       
@@ -76,14 +90,17 @@ class _LessonMediaWidgetState extends State<LessonMediaWidget> {
         await _videoController!.play();
       }
       
-      setState(() {});
+      setState(() => _isLoading = false);
     } catch (e) {
       print('Error initializing video: $e');
+      setState(() => _isLoading = false);
     }
   }
 
   Future<void> _initializeAudio() async {
     try {
+      setState(() => _isLoading = true);
+      
       _audioPlayer = AudioPlayer();
       
       _audioPlayer!.onDurationChanged.listen((duration) {
@@ -95,6 +112,14 @@ class _LessonMediaWidgetState extends State<LessonMediaWidget> {
       _audioPlayer!.onPositionChanged.listen((position) {
         setState(() {
           _audioPosition = position;
+          
+          // Update progress
+          if (_audioDuration.inSeconds > 0) {
+            final progress = position.inSeconds / _audioDuration.inSeconds;
+            if (widget.onProgressUpdate != null) {
+              widget.onProgressUpdate!(progress.clamp(0.0, 1.0), position, _audioDuration);
+            }
+          }
         });
       });
       
@@ -104,11 +129,101 @@ class _LessonMediaWidgetState extends State<LessonMediaWidget> {
         });
       });
       
+      _audioPlayer!.onPlayerComplete.listen((_) {
+        // Reset position when audio completes
+        setState(() {
+          _audioPosition = Duration.zero;
+          _isAudioPlaying = false;
+        });
+        
+        if (widget.onProgressUpdate != null) {
+          widget.onProgressUpdate!(1.0, _audioDuration, _audioDuration);
+        }
+      });
+      
+      // Preload audio source
+      await _audioPlayer!.setSourceUrl(widget.audioUrl!);
+      
       if (widget.enableAutoPlay) {
         await _playAudio();
       }
+      
+      setState(() => _isLoading = false);
     } catch (e) {
       print('Error initializing audio: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+  
+  // Public methods to control media playback
+  
+  void togglePlayPause() {
+    if (widget.videoUrl != null && widget.videoUrl!.isNotEmpty) {
+      _playPauseVideo();
+    } else if (widget.audioUrl != null && widget.audioUrl!.isNotEmpty) {
+      _playAudio();
+    }
+  }
+  
+  void pause() {
+    if (_videoController != null && _videoController!.value.isPlaying) {
+      _videoController!.pause();
+    }
+    
+    if (_audioPlayer != null && _isAudioPlaying) {
+      _audioPlayer!.pause();
+    }
+  }
+  
+  void play() {
+    if (_videoController != null && !_videoController!.value.isPlaying) {
+      _videoController!.play();
+    }
+    
+    if (_audioPlayer != null && !_isAudioPlaying) {
+      _playAudio();
+    }
+  }
+  
+  void seekTo(double progress) {
+    if (_videoController != null && _videoController!.value.isInitialized) {
+      final duration = _videoController!.value.duration;
+      final position = duration * progress;
+      _videoController!.seekTo(position);
+    }
+    
+    if (_audioPlayer != null && _audioDuration.inSeconds > 0) {
+      final position = _audioDuration * progress;
+      _audioPlayer!.seek(position);
+    }
+  }
+  
+  void skipForward() {
+    if (_videoController != null && _videoController!.value.isInitialized) {
+      final currentPosition = _videoController!.value.position;
+      _videoController!.seekTo(currentPosition + const Duration(seconds: 5));
+    }
+    
+    if (_audioPlayer != null) {
+      final newPosition = _audioPosition + const Duration(seconds: 5);
+      if (newPosition <= _audioDuration) {
+        _audioPlayer!.seek(newPosition);
+      } else {
+        _audioPlayer!.seek(_audioDuration);
+      }
+    }
+  }
+  
+  void skipBackward() {
+    if (_videoController != null && _videoController!.value.isInitialized) {
+      final currentPosition = _videoController!.value.position;
+      final newPosition = currentPosition - const Duration(seconds: 5);
+      _videoController!.seekTo(newPosition.inSeconds > 0 ? newPosition : Duration.zero);
+    }
+    
+    if (_audioPlayer != null) {
+      final newPosition = _audioPosition - const Duration(seconds: 5);
+      _audioPlayer!.seek(newPosition.inSeconds > 0 ? newPosition : Duration.zero);
     }
   }
 
@@ -131,7 +246,13 @@ class _LessonMediaWidgetState extends State<LessonMediaWidget> {
       if (_isAudioPlaying) {
         await _audioPlayer!.pause();
       } else {
-        await _audioPlayer!.play(UrlSource(widget.audioUrl!));
+        if (_audioPosition > Duration.zero) {
+          // Resume from current position
+          await _audioPlayer!.resume();
+        } else {
+          // Start from beginning
+          await _audioPlayer!.play(UrlSource(widget.audioUrl!));
+        }
       }
     } catch (e) {
       print('Error playing audio: $e');
@@ -167,7 +288,7 @@ class _LessonMediaWidgetState extends State<LessonMediaWidget> {
     }
 
     return GestureDetector(
-      onTap: widget.onTap ?? _playPauseVideo,
+      onTap: widget.onTap,
       child: Container(
         width: widget.width,
         height: widget.height,
@@ -184,7 +305,7 @@ class _LessonMediaWidgetState extends State<LessonMediaWidget> {
                 width: double.infinity,
                 height: double.infinity,
                 child: FittedBox(
-                  fit: BoxFit.cover,
+                  fit: BoxFit.contain,
                   child: SizedBox(
                     width: _videoController!.value.size.width,
                     height: _videoController!.value.size.height,
@@ -196,37 +317,154 @@ class _LessonMediaWidgetState extends State<LessonMediaWidget> {
               // Controls overlay
               if (widget.showControls)
                 Positioned.fill(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.3),
-                        ],
-                      ),
-                    ),
-                    child: Center(
-                      child: Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
+                  child: GestureDetector(
+                    onTap: _playPauseVideo,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.2),
+                            Colors.black.withOpacity(0.5),
                           ],
                         ),
-                        child: Icon(
-                          _isVideoPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                          color: Colors.red,
-                          size: 32,
-                        ),
+                      ),
+                      child: Stack(
+                        children: [
+                          // Center controls
+                          Center(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                // Skip backward
+                                InkWell(
+                                  onTap: skipBackward,
+                                  child: Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.7),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.replay_5,
+                                      color: Colors.red,
+                                      size: 24,
+                                    ),
+                                  ),
+                                ),
+                                
+                                const SizedBox(width: 16),
+                                
+                                // Play/Pause button
+                                InkWell(
+                                  onTap: _playPauseVideo,
+                                  child: Container(
+                                    width: 60,
+                                    height: 60,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.9),
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.3),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Icon(
+                                      _isVideoPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                      color: Colors.red,
+                                      size: 32,
+                                    ),
+                                  ),
+                                ),
+                                
+                                const SizedBox(width: 16),
+                                
+                                // Skip forward
+                                InkWell(
+                                  onTap: skipForward,
+                                  child: Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.7),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.forward_5,
+                                      color: Colors.red,
+                                      size: 24,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          
+                          // Bottom progress controls
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.transparent,
+                                    Colors.black.withOpacity(0.8),
+                                  ],
+                                ),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Slider for precise control
+                                  SliderTheme(
+                                    data: SliderThemeData(
+                                      trackHeight: 4,
+                                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                                    ),
+                                    child: Slider(
+                                      value: _videoController!.value.position.inMilliseconds.toDouble(),
+                                      min: 0,
+                                      max: _videoController!.value.duration.inMilliseconds.toDouble(),
+                                      activeColor: Colors.red,
+                                      inactiveColor: Colors.white.withOpacity(0.3),
+                                      onChanged: (value) {
+                                        _videoController!.seekTo(Duration(milliseconds: value.toInt()));
+                                      },
+                                    ),
+                                  ),
+                                  
+                                  // Time display
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          _formatDuration(_videoController!.value.position),
+                                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                                        ),
+                                        Text(
+                                          _formatDuration(_videoController!.value.duration),
+                                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -242,9 +480,9 @@ class _LessonMediaWidgetState extends State<LessonMediaWidget> {
                     color: Colors.red,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Row(
+                  child: const Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
+                    children: [
                       Icon(Icons.videocam, color: Colors.white, size: 12),
                       SizedBox(width: 4),
                       Text(
@@ -367,40 +605,12 @@ class _LessonMediaWidgetState extends State<LessonMediaWidget> {
           ],
         ),
         child: Stack(
+          alignment: Alignment.center,
           children: [
             // Audio wave background
             Positioned.fill(
               child: CustomPaint(
                 painter: _AudioWavesPainter(),
-              ),
-            ),
-            
-            // Play/Pause button
-            Center(
-              child: Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: _isLoading
-                    ? const CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-                        strokeWidth: 3,
-                      )
-                    : Icon(
-                        _isAudioPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                        color: Colors.blue,
-                        size: 36,
-                      ),
               ),
             ),
             
@@ -414,9 +624,9 @@ class _LessonMediaWidgetState extends State<LessonMediaWidget> {
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Row(
+                child: const Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
+                  children: [
                     Icon(Icons.audiotrack, color: Colors.white, size: 12),
                     SizedBox(width: 4),
                     Text(
@@ -432,48 +642,131 @@ class _LessonMediaWidgetState extends State<LessonMediaWidget> {
               ),
             ),
             
-            // Audio progress indicator
-            if (widget.showControls && _audioDuration.inSeconds > 0)
-              Positioned(
-                bottom: 12,
-                left: 12,
-                right: 12,
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
+            // Centered control box
+            Container(
+              width: 220,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Control buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Progress bar
-                      LinearProgressIndicator(
-                        value: _audioDuration.inSeconds > 0 
-                            ? _audioPosition.inSeconds / _audioDuration.inSeconds 
-                            : 0.0,
-                        backgroundColor: Colors.white.withOpacity(0.3),
-                        valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                      // Skip backward
+                      InkWell(
+                        onTap: skipBackward,
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.7),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.replay_5,
+                            color: Colors.blue,
+                            size: 24,
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 4),
-                      // Time display
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            _formatDuration(_audioPosition),
-                            style: const TextStyle(color: Colors.white, fontSize: 10),
+                      
+                      const SizedBox(width: 16),
+                      
+                      // Play/Pause button
+                      InkWell(
+                        onTap: _playAudio,
+                        child: Container(
+                          width: 70,
+                          height: 70,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.9),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 15,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
                           ),
-                          Text(
-                            _formatDuration(_audioDuration),
-                            style: const TextStyle(color: Colors.white, fontSize: 10),
+                          child: _isLoading
+                              ? const CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                                  strokeWidth: 3,
+                                )
+                              : Icon(
+                                  _isAudioPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                  color: Colors.blue,
+                                  size: 36,
+                                ),
+                        ),
+                      ),
+                      
+                      const SizedBox(width: 16),
+                      
+                      // Skip forward
+                      InkWell(
+                        onTap: skipForward,
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.7),
+                            shape: BoxShape.circle,
                           ),
-                        ],
+                          child: const Icon(
+                            Icons.forward_5,
+                            color: Colors.blue,
+                            size: 24,
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Progress slider
+                  if (_audioDuration.inSeconds > 0)
+                    SliderTheme(
+                      data: SliderThemeData(
+                        trackHeight: 4,
+                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                      ),
+                      child: Slider(
+                        value: _audioPosition.inMilliseconds.toDouble(),
+                        min: 0,
+                        max: _audioDuration.inMilliseconds.toDouble(),
+                        activeColor: Colors.white,
+                        inactiveColor: Colors.white.withOpacity(0.3),
+                        onChanged: (value) {
+                          _audioPlayer?.seek(Duration(milliseconds: value.toInt()));
+                        },
+                      ),
+                    ),
+                  
+                  // Time display
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _formatDuration(_audioPosition),
+                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                      Text(
+                        _formatDuration(_audioDuration),
+                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ],
               ),
+            ),
           ],
         ),
       ),

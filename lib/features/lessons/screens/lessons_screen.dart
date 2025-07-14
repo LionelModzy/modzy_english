@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/services/lesson_service.dart';
+import '../../../core/services/favorites_service.dart';
+import '../../../core/services/learning_progress_service.dart';
 import '../../../models/lesson_model.dart';
 import '../widgets/lesson_media_widget.dart';
 import 'lesson_detail_screen.dart';
@@ -25,6 +27,8 @@ class _LessonsScreenState extends State<LessonsScreen> with TickerProviderStateM
   
   List<LessonModel> _allLessons = [];
   List<LessonModel> _filteredLessons = [];
+  Map<String, dynamic> _learningStats = {};
+  List<Map<String, dynamic>> _recentHistory = [];
   bool _isLoading = true;
   
   final TextEditingController _searchController = TextEditingController();
@@ -71,6 +75,7 @@ class _LessonsScreenState extends State<LessonsScreen> with TickerProviderStateM
     ).animate(CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic));
     
     _loadLessons();
+    _loadLearningData();
     _animationController.forward();
   }
 
@@ -111,6 +116,23 @@ class _LessonsScreenState extends State<LessonsScreen> with TickerProviderStateM
           ),
         );
       }
+    }
+  }
+
+  Future<void> _loadLearningData() async {
+    try {
+      // Load learning statistics and recent history in parallel
+      final results = await Future.wait([
+        LearningProgressService.getLearningStats(),
+        LearningProgressService.getRecentHistory(limit: 5),
+      ]);
+      
+      setState(() {
+        _learningStats = results[0] as Map<String, dynamic>;
+        _recentHistory = results[1] as List<Map<String, dynamic>>;
+      });
+    } catch (e) {
+      print('❌ Error loading learning data: $e');
     }
   }
 
@@ -184,8 +206,9 @@ class _LessonsScreenState extends State<LessonsScreen> with TickerProviderStateM
           IconButton(
             icon: const Icon(Icons.search_rounded),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Search feature coming soon!')),
+              showSearch(
+                context: context,
+                delegate: LessonSearchDelegate(_allLessons),
               );
             },
           ),
@@ -245,6 +268,7 @@ class _LessonsScreenState extends State<LessonsScreen> with TickerProviderStateM
                         onSelected: (selected) {
                           setState(() {
                             _selectedCategory = category;
+                            _filterLessons();
                           });
                         },
                         backgroundColor: Colors.white,
@@ -285,6 +309,7 @@ class _LessonsScreenState extends State<LessonsScreen> with TickerProviderStateM
                         onSelected: (selected) {
                           setState(() {
                             _selectedDifficulty = difficulty;
+                            _filterLessons();
                           });
                         },
                         backgroundColor: Colors.white,
@@ -309,48 +334,199 @@ class _LessonsScreenState extends State<LessonsScreen> with TickerProviderStateM
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
               : _filteredLessons.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _filteredLessons.length,
-                      itemBuilder: (context, index) {
-                        return _buildLessonCard(_filteredLessons[index]);
-                      },
-                    ),
+              ? _buildEmptyState()
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _filteredLessons.length,
+                  itemBuilder: (context, index) {
+                    return _buildLessonCard(_filteredLessons[index]);
+                  },
+                ),
         ),
       ],
     );
   }
 
   Widget _buildFavoritesTab() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.favorite_border_rounded,
-            size: 64,
-            color: AppColors.textSecondary.withOpacity(0.5),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Yêu Thích',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
+    return FutureBuilder<List<LessonModel>>(
+      future: FavoritesService.getFavoriteLessons(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: AppColors.error.withOpacity(0.5),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Lỗi tải yêu thích',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  snapshot.error.toString(),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                CustomButton(
+                  text: 'Thử lại',
+                  onPressed: () => setState(() {}),
+                  icon: Icons.refresh,
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Các bài học yêu thích sẽ hiển thị ở đây',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
+          );
+        }
+
+        final favoriteLessons = snapshot.data ?? [];
+
+        if (favoriteLessons.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.favorite_border_rounded,
+                    size: 64,
+                    color: Colors.red.withOpacity(0.7),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Chưa có bài học yêu thích',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Thêm bài học vào yêu thích để học lại dễ dàng',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppColors.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                CustomButton(
+                  text: 'Khám phá bài học',
+                  onPressed: () => _tabController.animateTo(0),
+                  icon: Icons.explore,
+                  color: Colors.red,
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
+          );
+        }
+
+        return Column(
+          children: [
+            // Favorites summary header
+            Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.red, Colors.pink],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.red.withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.favorite_rounded,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Bài học yêu thích',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          '${favoriteLessons.length} bài học được lưu',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${favoriteLessons.length}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Favorites list
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: favoriteLessons.length,
+                itemBuilder: (context, index) {
+                  final lesson = favoriteLessons[index];
+                  return _buildFavoriteLessonCard(lesson);
+                },
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -360,6 +536,7 @@ class _LessonsScreenState extends State<LessonsScreen> with TickerProviderStateM
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Overall progress card
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -386,9 +563,9 @@ class _LessonsScreenState extends State<LessonsScreen> with TickerProviderStateM
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            'Learning Progress',
+                        children: [
+                          const Text(
+                            'Tiến độ học tập',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -396,8 +573,8 @@ class _LessonsScreenState extends State<LessonsScreen> with TickerProviderStateM
                             ),
                           ),
                           Text(
-                            'Keep up the great work!',
-                            style: TextStyle(
+                            'Tổng thời gian học: ${_learningStats['totalStudyTime'] ?? 0} phút',
+                            style: const TextStyle(
                               fontSize: 14,
                               color: Colors.white70,
                             ),
@@ -411,44 +588,135 @@ class _LessonsScreenState extends State<LessonsScreen> with TickerProviderStateM
                 Row(
                   children: [
                     Expanded(
-                      child: _buildProgressStat('Completed', '3', Icons.check_circle),
+                      child: _buildProgressStat(
+                        'Hoàn thành', 
+                        '${_learningStats['completedLessons'] ?? 0}', 
+                        Icons.check_circle
+                      ),
                     ),
                     Expanded(
-                      child: _buildProgressStat('In Progress', '2', Icons.play_circle),
+                      child: _buildProgressStat(
+                        'Đang học', 
+                        '${_learningStats['inProgressLessons'] ?? 0}', 
+                        Icons.play_circle
+                      ),
                     ),
                     Expanded(
-                      child: _buildProgressStat('Remaining', '${_allLessons.length - 5}', Icons.pending),
+                      child: _buildProgressStat(
+                        'Còn lại', 
+                        '${_allLessons.length - (_learningStats['totalLessons'] ?? 0)}', 
+                        Icons.pending
+                      ),
                     ),
                   ],
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 24),
-          
-          const Text(
-            'Continue Learning',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildContinueLearningCard(),
           
           const SizedBox(height: 24),
           
-          const Text(
-            'Recently Completed',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+          // Study streak card
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.accent.withOpacity(0.2)),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.accent.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.local_fire_department_rounded,
+                    color: AppColors.accent,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Chuỗi học tập',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Hiện tại: ${_learningStats['currentStreak'] ?? 0} ngày',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      Text(
+                        'Tốt nhất: ${_learningStats['bestStreak'] ?? 0} ngày',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '${_learningStats['currentStreak'] ?? 0}',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.accent,
+                  ),
+                ),
+              ],
             ),
           ),
+          
+          const SizedBox(height: 24),
+          
+          // Recent activity section
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Hoạt động gần đây',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  // Navigate to full learning history
+                },
+                child: const Text('Xem tất cả'),
+              ),
+            ],
+          ),
           const SizedBox(height: 16),
-          ..._allLessons.take(3).map((lesson) => _buildCompletedLessonCard(lesson)),
+          
+          if (_recentHistory.isEmpty)
+            _buildEmptyHistoryState()
+          else
+            ..._recentHistory.map((activity) => _buildActivityCard(activity)),
         ],
       ),
     );
@@ -479,89 +747,34 @@ class _LessonsScreenState extends State<LessonsScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildContinueLearningCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.accent.withOpacity(0.2)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.accent.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.accent.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              Icons.play_circle_filled_rounded,
-              color: AppColors.accent,
-              size: 32,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'Present Tense Mastery',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Progress: 65%',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: 0.65,
-                  backgroundColor: AppColors.border,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
-          CustomButton(
-            text: 'Continue',
-                         onPressed: () => _allLessons.isNotEmpty ? _openLesson(_allLessons[0]) : null,
-            width: 80,
-            height: 36,
-            color: AppColors.accent,
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildActivityCard(Map<String, dynamic> activity) {
+    IconData activityIcon;
+    Color activityColor;
+    
+    switch (activity['type']) {
+      case 'lesson':
+        activityIcon = Icons.book_rounded;
+        activityColor = AppColors.primary;
+        break;
+      case 'vocabulary':
+        activityIcon = Icons.quiz_rounded;
+        activityColor = AppColors.secondary;
+        break;
+      default:
+        activityIcon = Icons.school_rounded;
+        activityColor = AppColors.accent;
+    }
 
-  Widget _buildCompletedLessonCard(LessonModel lesson) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.success.withOpacity(0.2)),
+        border: Border.all(color: activityColor.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.success.withOpacity(0.1),
+            color: activityColor.withOpacity(0.1),
             blurRadius: 6,
             offset: const Offset(0, 3),
           ),
@@ -570,39 +783,122 @@ class _LessonsScreenState extends State<LessonsScreen> with TickerProviderStateM
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.success.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+              color: activityColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
-              Icons.check_circle,
-              color: AppColors.success,
+              activityIcon,
+              color: activityColor,
               size: 20,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  lesson.title,
+                  activity['title'] ?? 'Hoạt động',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
                   ),
                 ),
-                const Text(
-                  'Completed • Score: 95%',
-                  style: TextStyle(
+                Text(
+                  activity['subtitle'] ?? '',
+                  style: const TextStyle(
                     fontSize: 12,
-                    color: AppColors.success,
+                    color: AppColors.textSecondary,
                   ),
                 ),
+                if (activity['details'] != null)
+                  Text(
+                    _getActivityDetails(activity),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: activityColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
               ],
             ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: activityColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '${activity['accuracy']?.round() ?? activity['completion']?.round() ?? 0}%',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: activityColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getActivityDetails(Map<String, dynamic> activity) {
+    final details = activity['details'] as Map<String, dynamic>?;
+    if (details == null) return '';
+    
+    if (activity['type'] == 'vocabulary') {
+      return '${details['correctAnswers']}/${details['totalQuestions']} đúng';
+    } else if (activity['type'] == 'lesson') {
+      final timeSpent = details['timeSpent'] as int? ?? 0;
+      final minutes = (timeSpent / 60).round();
+      return 'Học $minutes phút';
+    }
+    return '';
+  }
+
+  Widget _buildEmptyHistoryState() {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.history_rounded,
+            size: 48,
+            color: AppColors.textSecondary.withOpacity(0.5),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Chưa có hoạt động học tập',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Bắt đầu học để xem tiến độ ở đây',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          CustomButton(
+            text: 'Bắt đầu học',
+            onPressed: () => _tabController.animateTo(0),
+            icon: Icons.play_arrow,
+            width: 140,
+            height: 36,
           ),
         ],
       ),
@@ -776,24 +1072,47 @@ class _LessonsScreenState extends State<LessonsScreen> with TickerProviderStateM
                   ),
                 ),
                 const SizedBox(width: 12),
-                Container(
-                  height: 44,
-                  width: 44,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.border),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.favorite_border_rounded,
-                      color: AppColors.textSecondary,
-                    ),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Added "${lesson.title}" to favorites')),
-                      );
-                    },
-                  ),
+                FutureBuilder<bool>(
+                  future: _checkIfFavorite(lesson.id),
+                  builder: (context, snapshot) {
+                    final isFavorite = snapshot.data ?? false;
+                    return Container(
+                      height: 44,
+                      width: 44,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: isFavorite ? Colors.red : AppColors.border),
+                        borderRadius: BorderRadius.circular(12),
+                        color: isFavorite ? Colors.red.withOpacity(0.1) : null,
+                      ),
+                      child: IconButton(
+                        icon: Icon(
+                          isFavorite ? Icons.favorite : Icons.favorite_border_rounded,
+                          color: isFavorite ? Colors.red : AppColors.textSecondary,
+                        ),
+                        onPressed: () async {
+                          bool success;
+                          if (isFavorite) {
+                            success = await FavoritesService.removeLessonFromFavorites(lesson.id);
+                          } else {
+                            success = await FavoritesService.addLessonToFavorites(lesson.id);
+                          }
+                          
+                          if (success) {
+                            setState(() {}); // Refresh to update the UI
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(isFavorite 
+                                  ? 'Đã xóa "${lesson.title}" khỏi yêu thích'
+                                  : 'Đã thêm "${lesson.title}" vào yêu thích'
+                                ),
+                                backgroundColor: isFavorite ? Colors.grey : Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -815,10 +1134,10 @@ class _LessonsScreenState extends State<LessonsScreen> with TickerProviderStateM
         const SizedBox(width: 4),
         Expanded(
           child: Text(
-            text,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
+          text,
+          style: const TextStyle(
+            fontSize: 12,
+            color: AppColors.textSecondary,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -877,11 +1196,412 @@ class _LessonsScreenState extends State<LessonsScreen> with TickerProviderStateM
     }
   }
 
+  Widget _buildFavoriteLessonCard(LessonModel lesson) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red.withOpacity(0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.red.withOpacity(0.1),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(16),
+        leading: Stack(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: _getCategoryColor(lesson.category).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                _getCategoryIcon(lesson.category),
+                color: _getCategoryColor(lesson.category),
+                size: 20,
+              ),
+            ),
+            Positioned(
+              top: -2,
+              right: -2,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.favorite,
+                  color: Colors.white,
+                  size: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
+        title: Text(
+          lesson.title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Text(
+              lesson.description,
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildInfoChip(lesson.category, _getCategoryColor(lesson.category)),
+                const SizedBox(width: 8),
+                _buildInfoChip(lesson.difficultyLevelName, Colors.orange),
+              ],
+            ),
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.favorite, color: Colors.red, size: 20),
+              onPressed: () async {
+                final success = await FavoritesService.removeLessonFromFavorites(lesson.id);
+                if (success) {
+                  setState(() {}); // Refresh the favorites tab
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Đã xóa "${lesson.title}" khỏi yêu thích'),
+                      backgroundColor: Colors.grey,
+                    ),
+                  );
+                }
+              },
+            ),
+            const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textSecondary),
+          ],
+        ),
+        onTap: () => _openLesson(lesson),
+      ),
+    );
+  }
+
+  Widget _buildInfoChip(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 10,
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'grammar':
+        return const Color(0xFF8B5CF6);
+      case 'vocabulary':
+        return const Color(0xFF06B6D4);
+      case 'speaking':
+        return const Color(0xFF10B981);
+      case 'listening':
+        return const Color(0xFFF59E0B);
+      case 'writing':
+        return const Color(0xFFEF4444);
+      default:
+        return AppColors.primary;
+    }
+  }
+
+  Future<bool> _checkIfFavorite(String lessonId) async {
+    try {
+      final favorites = await FavoritesService.getFavoriteLessons();
+      return favorites.any((lesson) => lesson.id == lessonId);
+    } catch (e) {
+      return false;
+    }
+  }
+
   void _openLesson(LessonModel lesson) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => LessonDetailScreen(lesson: lesson),
       ),
     );
+  }
+}
+
+// Search Delegate for Lessons
+class LessonSearchDelegate extends SearchDelegate<LessonModel?> {
+  final List<LessonModel> lessons;
+
+  LessonSearchDelegate(this.lessons);
+
+  @override
+  List<Widget> buildActions(BuildContext context) {
+    return [
+      IconButton(
+        icon: const Icon(Icons.clear),
+        onPressed: () => query = '',
+      ),
+    ];
+  }
+
+  @override
+  Widget buildLeading(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () => close(context, null),
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return _buildSearchResults();
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return _buildSearchResults();
+  }
+
+  Widget _buildSearchResults() {
+    final results = lessons.where((lesson) {
+      final titleMatch = lesson.title.toLowerCase().contains(query.toLowerCase());
+      final descriptionMatch = lesson.description.toLowerCase().contains(query.toLowerCase());
+      final categoryMatch = lesson.category.toLowerCase().contains(query.toLowerCase());
+      final tagMatch = lesson.tags.any((tag) => tag.toLowerCase().contains(query.toLowerCase()));
+      
+      return titleMatch || descriptionMatch || categoryMatch || tagMatch;
+    }).toList();
+
+    if (query.isEmpty) {
+      return _buildSearchSuggestions();
+    }
+
+    if (results.isEmpty) {
+      return _buildNoResultsFound();
+    }
+
+    return Builder(
+      builder: (context) => ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: results.length,
+        itemBuilder: (context, index) {
+          final lesson = results[index];
+          return _buildSearchResultCard(lesson, context);
+        },
+      ),
+    );
+  }
+
+  Widget _buildSearchSuggestions() {
+    final suggestions = [
+      'Grammar lessons',
+      'Beginner vocabulary',
+      'Speaking practice',
+      'Present tense',
+      'Listening exercises',
+    ];
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: suggestions.length,
+      itemBuilder: (context, index) {
+        final suggestion = suggestions[index];
+        return ListTile(
+          leading: const Icon(Icons.search, color: AppColors.textSecondary),
+          title: Text(suggestion),
+          onTap: () {
+            query = suggestion;
+            showResults(context);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildNoResultsFound() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off,
+            size: 64,
+            color: AppColors.textSecondary.withOpacity(0.5),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Không tìm thấy bài học nào',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Thử tìm kiếm với từ khóa khác cho "$query"',
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchResultCard(LessonModel lesson, BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.1),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(16),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: _getCategoryColor(lesson.category).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            _getCategoryIcon(lesson.category),
+            color: _getCategoryColor(lesson.category),
+            size: 20,
+          ),
+        ),
+        title: Text(
+          lesson.title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Text(
+              lesson.description,
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildInfoChip(lesson.category, _getCategoryColor(lesson.category)),
+                const SizedBox(width: 8),
+                _buildInfoChip(lesson.difficultyLevelName, Colors.orange),
+                const SizedBox(width: 8),
+                _buildInfoChip(lesson.formattedDuration, Colors.blue),
+              ],
+            ),
+          ],
+        ),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textSecondary),
+        onTap: () {
+          // Navigate to lesson detail and close search
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => LessonDetailScreen(lesson: lesson),
+            ),
+          ).then((_) => close(context, lesson));
+        },
+      ),
+    );
+  }
+
+  Widget _buildInfoChip(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 10,
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'grammar':
+        return const Color(0xFF8B5CF6);
+      case 'vocabulary':
+        return const Color(0xFF06B6D4);
+      case 'speaking':
+        return const Color(0xFF10B981);
+      case 'listening':
+        return const Color(0xFFF59E0B);
+      case 'writing':
+        return const Color(0xFFEF4444);
+      default:
+        return AppColors.primary;
+    }
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'grammar':
+        return Icons.menu_book_rounded;
+      case 'vocabulary':
+        return Icons.library_books_rounded;
+      case 'speaking':
+        return Icons.record_voice_over_rounded;
+      case 'listening':
+        return Icons.headphones_rounded;
+      case 'writing':
+        return Icons.edit_rounded;
+      default:
+        return Icons.school_rounded;
+    }
   }
 } 

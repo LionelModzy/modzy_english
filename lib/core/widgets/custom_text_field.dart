@@ -15,6 +15,7 @@ class CustomTextField extends StatefulWidget {
   final bool readOnly;
   final Widget? suffixIcon;
   final String? helperText;
+  final Function(String)? onChanged;
 
   const CustomTextField({
     super.key,
@@ -31,6 +32,7 @@ class CustomTextField extends StatefulWidget {
     this.readOnly = false,
     this.suffixIcon,
     this.helperText,
+    this.onChanged,
   });
 
   @override
@@ -113,6 +115,7 @@ class _CustomTextFieldState extends State<CustomTextField>
                     maxLines: widget.maxLines,
                     onTap: widget.onTap,
                     readOnly: widget.readOnly,
+                    onChanged: widget.onChanged,
                     style: const TextStyle(
                       fontSize: 16,
                       color: AppColors.textPrimary,

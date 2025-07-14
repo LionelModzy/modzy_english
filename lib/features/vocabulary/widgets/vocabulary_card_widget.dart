@@ -8,6 +8,7 @@ class VocabularyCardWidget extends StatefulWidget {
   final VoidCallback? onTap;
   final VoidCallback? onAddToStudyList;
   final VoidCallback? onRemoveFromStudyList;
+  final VoidCallback? onPractice;
   final bool isInStudyList;
   final bool showAudio;
   final bool showActions;
@@ -18,6 +19,7 @@ class VocabularyCardWidget extends StatefulWidget {
     this.onTap,
     this.onAddToStudyList,
     this.onRemoveFromStudyList,
+    this.onPractice,
     this.isInStudyList = false,
     this.showAudio = true,
     this.showActions = true,
@@ -163,8 +165,8 @@ class _VocabularyCardWidgetState extends State<VocabularyCardWidget> with Ticker
     return GestureDetector(
       onTap: _onCardTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -180,32 +182,26 @@ class _VocabularyCardWidgetState extends State<VocabularyCardWidget> with Ticker
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with word and difficulty
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+            // Header with word and audio button (audio moved outside)
             Row(
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Word and pronunciation
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              widget.vocabulary.word,
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: _getCategoryColor(),
-                              ),
-                            ),
-                          ),
-                          if (widget.showAudio && widget.vocabulary.hasAudio)
-                            _buildAudioButton(),
-                        ],
+                      // Word only
+                      Text(
+                        widget.vocabulary.word,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: _getCategoryColor(),
+                        ),
                       ),
                       
                       if (widget.vocabulary.pronunciation.isNotEmpty) ...[
@@ -223,51 +219,38 @@ class _VocabularyCardWidgetState extends State<VocabularyCardWidget> with Ticker
                   ),
                 ),
                 
-                // Difficulty badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _getDifficultyColor().withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: _getDifficultyColor().withOpacity(0.3),
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    widget.vocabulary.vietnameseDifficultyName,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: _getDifficultyColor(),
-                    ),
-                  ),
-                ),
+                // Audio button moved to outside corner
+                if (widget.showAudio && widget.vocabulary.hasAudio)
+                  _buildAudioButton(),
               ],
             ),
             
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             
             // Meaning
             Text(
               widget.vocabulary.meaning,
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: AppColors.textPrimary,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             
-            // Definition
+            // Definition (limited to save space)
             if (widget.vocabulary.definition != null && widget.vocabulary.definition!.isNotEmpty) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 widget.vocabulary.definition!,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 12,
                   color: Colors.grey[600],
-                  height: 1.3,
+                  height: 1.2,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
             
@@ -291,126 +274,208 @@ class _VocabularyCardWidgetState extends State<VocabularyCardWidget> with Ticker
               ),
             ],
             
-            // Examples
+            // Examples (limited to save space)
             if (widget.vocabulary.examples.isNotEmpty) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Text(
                 'Ví dụ:',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: Colors.grey[700],
                 ),
               ),
-              const SizedBox(height: 4),
-              ...widget.vocabulary.examples.take(2).map((example) => Padding(
+              const SizedBox(height: 2),
+              Padding(
                 padding: const EdgeInsets.only(top: 2),
                 child: Text(
-                  '• $example',
+                  '• ${widget.vocabulary.examples.first}',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 11,
                     color: Colors.grey[600],
-                    height: 1.3,
+                    height: 1.2,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              )),
+              ),
             ],
             
             // Actions
             if (widget.showActions) ...[
-              const SizedBox(height: 12),
-              Row(
+              const SizedBox(height: 8),
+              Column(
                 children: [
-                  // Category indicator
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: _getCategoryColor(),
-                            shape: BoxShape.circle,
-                          ),
+                  // Category and difficulty indicators
+                  Row(
+                    children: [
+                      // Category
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: _getCategoryColor(),
+                          shape: BoxShape.circle,
                         ),
-                        const SizedBox(width: 6),
-                        Text(
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
                           widget.vocabulary.category,
                           style: TextStyle(
                             fontSize: 12,
                             color: _getCategoryColor(),
                             fontWeight: FontWeight.w500,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        if (widget.vocabulary.lessonCount > 0) ...[
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.book_outlined,
-                            size: 12,
-                            color: Colors.grey[500],
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            '${widget.vocabulary.lessonCount}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey[500],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  
-                  // Study list button
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(20),
-                      onTap: widget.isInStudyList 
-                          ? widget.onRemoveFromStudyList 
-                          : widget.onAddToStudyList,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      ),
+                      
+                      // Difficulty badge (moved inside)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: widget.isInStudyList 
-                              ? AppColors.success.withOpacity(0.1)
-                              : AppColors.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20),
+                          color: _getDifficultyColor().withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: widget.isInStudyList 
-                                ? AppColors.success.withOpacity(0.3)
-                                : AppColors.primary.withOpacity(0.3),
+                            color: _getDifficultyColor().withOpacity(0.3),
                             width: 1,
                           ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              widget.isInStudyList 
-                                  ? Icons.check_circle_outline 
-                                  : Icons.add_circle_outline,
-                              size: 14,
-                              color: widget.isInStudyList 
-                                  ? AppColors.success 
-                                  : AppColors.primary,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              widget.isInStudyList ? 'Đã thêm' : 'Học',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: widget.isInStudyList 
-                                    ? AppColors.success 
-                                    : AppColors.primary,
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          widget.vocabulary.vietnameseDifficultyName,
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            color: _getDifficultyColor(),
+                          ),
                         ),
                       ),
-                    ),
+                      
+                      if (widget.vocabulary.lessonCount > 0) ...[
+                        const SizedBox(width: 6),
+                        Icon(
+                          Icons.book_outlined,
+                          size: 12,
+                          color: Colors.grey[500],
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          '${widget.vocabulary.lessonCount}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 8),
+                  
+                  // Action buttons
+                  Row(
+                    children: [
+                      // Practice button
+                      if (widget.onPractice != null) 
+                        Expanded(
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: widget.onPractice,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.accent.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: AppColors.accent.withOpacity(0.3),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.quiz,
+                                      size: 12,
+                                      color: AppColors.accent,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Luyện',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.accent,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      
+                      if (widget.onPractice != null) const SizedBox(width: 8),
+                      
+                      // Study list button
+                      Expanded(
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: widget.isInStudyList 
+                                ? widget.onRemoveFromStudyList 
+                                : widget.onAddToStudyList,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: widget.isInStudyList 
+                                    ? AppColors.success.withOpacity(0.1)
+                                    : AppColors.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: widget.isInStudyList 
+                                      ? AppColors.success.withOpacity(0.3)
+                                      : AppColors.primary.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    widget.isInStudyList 
+                                        ? Icons.check_circle_outline 
+                                        : Icons.add_circle_outline,
+                                    size: 12,
+                                    color: widget.isInStudyList 
+                                        ? AppColors.success 
+                                        : AppColors.primary,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    widget.isInStudyList ? 'Đã thêm' : 'Học',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: widget.isInStudyList 
+                                          ? AppColors.success 
+                                          : AppColors.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -418,6 +483,7 @@ class _VocabularyCardWidgetState extends State<VocabularyCardWidget> with Ticker
           ],
         ),
       ),
+        ),
     );
   }
 

@@ -6,6 +6,8 @@ import 'core/constants/app_colors.dart';
 import 'features/auth/screens/auth_wrapper_screen.dart';
 import 'features/home/screens/home_screen.dart';
 import 'features/auth/data/auth_repository.dart';
+import 'features/vocabulary/screens/vocabulary_practice_screen.dart';
+import 'models/vocab_model.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +34,30 @@ class ModzyEnglishApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: _buildTheme(),
       home: const AuthWrapper(),
+      onGenerateRoute: (settings) {
+        switch (settings.name) {
+          case '/vocabulary_practice':
+            final args = settings.arguments;
+            if (args is VocabularyModel) {
+              return MaterialPageRoute(
+                builder: (context) => VocabularyPracticeScreen(initialVocabulary: args),
+              );
+            } else if (args is Map<String, dynamic>) {
+              return MaterialPageRoute(
+                builder: (context) => VocabularyPracticeScreen(
+                  category: args['category'],
+                  difficultyLevel: args['difficultyLevel'],
+                ),
+              );
+            } else {
+              return MaterialPageRoute(
+                builder: (context) => const VocabularyPracticeScreen(),
+              );
+            }
+          default:
+            return null;
+        }
+      },
     );
   }
 
