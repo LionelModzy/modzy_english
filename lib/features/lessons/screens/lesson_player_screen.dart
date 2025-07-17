@@ -3,6 +3,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/services/learning_progress_service.dart';
 import '../../../models/lesson_model.dart';
 import '../widgets/lesson_media_widget.dart';
+import '../widgets/mobile_optimized_video_player.dart';
 
 class LessonPlayerScreen extends StatefulWidget {
   final LessonModel lesson;
@@ -30,14 +31,11 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
   bool _isCompleted = false;
   double _progress = 0.0;
   Duration _currentPosition = Duration.zero;
-  Duration _totalDuration = Duration.zero; // Remove default duration
-  
-  // Key for LessonMediaWidget
-  final _mediaWidgetKey = GlobalKey<LessonMediaWidgetState>();
+  Duration _totalDuration = Duration.zero;
   
   // Timer for periodic progress tracking
   late bool _hasLoadedSavedPosition = false;
-  
+
   @override
   void initState() {
     super.initState();
@@ -88,7 +86,7 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
   }
   
   Future<void> _saveMediaProgress() async {
-    if (_mediaWidgetKey.currentState != null && widget.section.mediaUrl != null) {
+    if (widget.section.mediaUrl != null) {
       final mediaType = widget.section.type.toLowerCase();
       if (mediaType == 'video' || mediaType == 'audio') {
         await LearningProgressService.trackLessonSectionMediaProgress(
@@ -143,30 +141,13 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
           final bool shouldRestore = !savedCompleted && savedProg < 0.95 && savedProg > 0.05;
 
           if (shouldRestore) {
-            // Store saved position but don't apply immediately
+            // Store saved position for later application
             _hasLoadedSavedPosition = true;
             _progress = savedProg;
             _currentPosition = Duration(seconds: savedPositionSec);
             if (savedDurationSec != null) {
               _totalDuration = Duration(seconds: savedDurationSec);
             }
-
-            // Apply saved position after media has fully loaded (with delay)
-            Future.delayed(const Duration(seconds: 2), () {
-              if (mounted && _mediaWidgetKey.currentState != null) {
-                _mediaWidgetKey.currentState!.seekTo(_progress);
-                _hasLoadedSavedPosition = false;
-                
-                // Show progress restoration notification
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Đã khôi phục tiến độ tại ${(_progress * 100).toInt()}%'),
-                    backgroundColor: _getCategoryColor(widget.lesson.category),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              }
-            });
           } else {
             // Either completed or near completion -> start fresh
             _hasLoadedSavedPosition = false;
@@ -231,9 +212,8 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
   }
 
   void _togglePlayPause() {
-    if (_mediaWidgetKey.currentState != null) {
-      _mediaWidgetKey.currentState!.togglePlayPause();
-    }
+    // Video player controls are now handled internally by MobileOptimizedVideoPlayer
+    // We just update local state for UI consistency
     setState(() => _isPlaying = !_isPlaying);
   }
 
@@ -288,15 +268,16 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
   }
   
   void _restartSection() {
-    if (_mediaWidgetKey.currentState != null) {
-      _mediaWidgetKey.currentState!.seekTo(0.0);
-      _mediaWidgetKey.currentState!.play();
-      setState(() {
-        _isCompleted = false;
-        _progress = 0.0;
-        _currentPosition = Duration.zero;
-      });
-    }
+    // Reset progress state - video player will handle the actual restart
+    setState(() {
+      _isCompleted = false;
+      _progress = 0.0;
+      _currentPosition = Duration.zero;
+      _hasLoadedSavedPosition = false;
+    });
+    
+    // Force rebuild of video player with initial position reset
+    setState(() {});
   }
 
   @override
@@ -784,7 +765,7 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
   }
 
   Widget _buildVideoPlayer() {
-    // Use the LessonMediaWidget for video playback
+    // Use the MobileOptimizedVideoPlayer for better mobile compatibility
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -793,15 +774,14 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
       child: widget.section.mediaUrl != null && widget.section.mediaUrl!.isNotEmpty
         ? Stack(
             children: [
-              // Video player
-              LessonMediaWidget(
-                key: _mediaWidgetKey,
-                videoUrl: widget.section.mediaUrl,
+              // Video player with mobile optimization
+              MobileOptimizedVideoPlayer(
+                videoUrl: widget.section.mediaUrl!,
                 width: double.infinity,
                 height: double.infinity,
                 enableAutoPlay: !_isCompleted, // Don't autoplay if already completed
-                showControls: true,
                 onProgressUpdate: _updateProgress,
+                initialPosition: _hasLoadedSavedPosition ? _currentPosition : null,
               ),
               
               // Custom overlay for better UX
@@ -933,7 +913,6 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
             ),
             child: widget.section.mediaUrl != null && widget.section.mediaUrl!.isNotEmpty
               ? LessonMediaWidget(
-                  key: _mediaWidgetKey,
                   audioUrl: widget.section.mediaUrl,
                   width: double.infinity,
                   height: double.infinity,
@@ -1210,11 +1189,7 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
   }
 
   void _completeSection() {
-    // Stop media playback
-    if (_mediaWidgetKey.currentState != null) {
-      _mediaWidgetKey.currentState!.pause();
-    }
-    
+    // Media playback will be handled by the video player itself
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
