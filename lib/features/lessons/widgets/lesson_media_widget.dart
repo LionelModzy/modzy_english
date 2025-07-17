@@ -465,128 +465,154 @@ class LessonMediaWidgetState extends State<LessonMediaWidget> {
               ),
             ),
             
-            // Centered control box
+            // Main content container with constraints
             Container(
-              width: 220,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(16),
+              constraints: BoxConstraints(
+                maxWidth: widget.width - 32,
+                maxHeight: widget.height - 32,
               ),
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Control buttons
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Skip backward
-                      InkWell(
-                        onTap: skipBackward,
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.7),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.replay_5,
-                            color: Colors.blue,
-                            size: 24,
+                  // Control buttons with proper spacing
+                  Flexible(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Skip backward
+                        InkWell(
+                          onTap: skipBackward,
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.7),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.replay_5,
+                              color: Colors.blue,
+                              size: 20,
+                            ),
                           ),
                         ),
-                      ),
-                      
-                      const SizedBox(width: 16),
-                      
-                      // Play/Pause button
-                      InkWell(
-                        onTap: _playAudio,
-                        child: Container(
-                          width: 70,
-                          height: 70,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.9),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
-                                blurRadius: 15,
-                                offset: const Offset(0, 5),
-                              ),
-                            ],
-                          ),
-                          child: _isLoading
-                              ? const CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-                                  strokeWidth: 3,
-                                )
-                              : Icon(
-                                  _isAudioPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                                  color: Colors.blue,
-                                  size: 36,
+                        
+                        const SizedBox(width: 12),
+                        
+                        // Play/Pause button
+                        InkWell(
+                          onTap: _playAudio,
+                          child: Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.9),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.3),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 5),
                                 ),
-                        ),
-                      ),
-                      
-                      const SizedBox(width: 16),
-                      
-                      // Skip forward
-                      InkWell(
-                        onTap: skipForward,
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.7),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.forward_5,
-                            color: Colors.blue,
-                            size: 24,
+                              ],
+                            ),
+                            child: _isLoading
+                                ? const CircularProgressIndicator(
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                                    strokeWidth: 3,
+                                  )
+                                : Icon(
+                                    _isAudioPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                    color: Colors.blue,
+                                    size: 30,
+                                  ),
                           ),
                         ),
-                      ),
-                    ],
+                        
+                        const SizedBox(width: 12),
+                        
+                        // Skip forward
+                        InkWell(
+                          onTap: skipForward,
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.7),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.forward_5,
+                              color: Colors.blue,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   
                   const SizedBox(height: 16),
                   
-                  // Progress slider
+                  // Progress section with constraints
                   if (_audioDuration.inSeconds > 0)
-                    SliderTheme(
-                      data: SliderThemeData(
-                        trackHeight: 4,
-                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                    Container(
+                      constraints: BoxConstraints(
+                        maxWidth: widget.width - 64,
                       ),
-                      child: Slider(
-                        value: _audioPosition.inMilliseconds.toDouble(),
-                        min: 0,
-                        max: _audioDuration.inMilliseconds.toDouble(),
-                        activeColor: Colors.white,
-                        inactiveColor: Colors.white.withOpacity(0.3),
-                        onChanged: (value) {
-                          _audioPlayer?.seek(Duration(milliseconds: value.toInt()));
-                        },
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Progress slider
+                          SliderTheme(
+                            data: SliderThemeData(
+                              trackHeight: 4,
+                              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                              overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                            ),
+                            child: Slider(
+                              value: _audioPosition.inMilliseconds.toDouble().clamp(
+                                0.0, 
+                                _audioDuration.inMilliseconds.toDouble()
+                              ),
+                              min: 0,
+                              max: _audioDuration.inMilliseconds.toDouble(),
+                              activeColor: Colors.white,
+                              inactiveColor: Colors.white.withOpacity(0.3),
+                              onChanged: (value) {
+                                _audioPlayer?.seek(Duration(milliseconds: value.toInt()));
+                              },
+                            ),
+                          ),
+                          
+                          // Time display with flexible layout
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    _formatDuration(_audioPosition),
+                                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Flexible(
+                                  child: Text(
+                                    _formatDuration(_audioDuration),
+                                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  
-                  // Time display
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        _formatDuration(_audioPosition),
-                        style: const TextStyle(color: Colors.white, fontSize: 12),
-                      ),
-                      Text(
-                        _formatDuration(_audioDuration),
-                        style: const TextStyle(color: Colors.white, fontSize: 12),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),

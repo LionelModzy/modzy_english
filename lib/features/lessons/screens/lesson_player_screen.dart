@@ -140,10 +140,10 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
           final bool savedCompleted = savedProgress['completed'] ?? false;
 
           // Only restore progress when it is meaningful (<95%) and not marked completed
-          final bool shouldRestore = !savedCompleted && savedProg < 0.95;
+          final bool shouldRestore = !savedCompleted && savedProg < 0.95 && savedProg > 0.05;
 
           if (shouldRestore) {
-            // We'll use this data once the media widget has initialized
+            // Store saved position but don't apply immediately
             _hasLoadedSavedPosition = true;
             _progress = savedProg;
             _currentPosition = Duration(seconds: savedPositionSec);
@@ -151,20 +151,22 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
               _totalDuration = Duration(seconds: savedDurationSec);
             }
 
-            // Notify user that progress has been restored
-            if (_progress > 0.05) {
-              Future.delayed(const Duration(seconds: 1), () {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Đã khôi phục tiến độ (${(_progress * 100).toInt()}%)'),
-                      backgroundColor: _getCategoryColor(widget.lesson.category),
-                      duration: const Duration(seconds: 3),
-                    ),
-                  );
-                }
-              });
-            }
+            // Apply saved position after media has fully loaded (with delay)
+            Future.delayed(const Duration(seconds: 2), () {
+              if (mounted && _mediaWidgetKey.currentState != null) {
+                _mediaWidgetKey.currentState!.seekTo(_progress);
+                _hasLoadedSavedPosition = false;
+                
+                // Show progress restoration notification
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Đã khôi phục tiến độ tại ${(_progress * 100).toInt()}%'),
+                    backgroundColor: _getCategoryColor(widget.lesson.category),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              }
+            });
           } else {
             // Either completed or near completion -> start fresh
             _hasLoadedSavedPosition = false;
@@ -249,15 +251,7 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
         }
       });
       
-      // If we had saved progress, seek to that position once media is loaded
-      if (_hasLoadedSavedPosition && _mediaWidgetKey.currentState != null) {
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (_mediaWidgetKey.currentState != null) {
-            _mediaWidgetKey.currentState!.seekTo(_progress);
-            _hasLoadedSavedPosition = false;
-          }
-        });
-      }
+      // Remove the immediate seekTo call that was causing issues
     }
   }
   
@@ -560,11 +554,230 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
     );
   }
 
+  Widget _buildExerciseContent() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.green[50]!,
+            Colors.green[100]!,
+          ],
+        ),
+      ),
+      child: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with exercise icon
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.green.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.quiz_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.section.title,
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                              height: 1.3,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Bài tập thực hành',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.green,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 32),
+              
+              // Exercise content
+              if (widget.section.content.isNotEmpty) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Hướng dẫn bài tập:',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        widget.section.content,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          color: Colors.black87,
+                          height: 1.7,
+                          letterSpacing: 0.2,
+                        ),
+                        textAlign: TextAlign.justify,
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+                
+                // Interactive elements placeholder
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.green[200]!, width: 1),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.construction,
+                        size: 48,
+                        color: Colors.green,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Tính năng bài tập tương tác',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tính năng này đang được phát triển. Bài tập tương tác sẽ sớm có mặt!',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.green[700],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          // Mark as completed for now
+                          setState(() {
+                            _isCompleted = true;
+                            _progress = 1.0;
+                          });
+                          _showCompletionDialog();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        icon: const Icon(Icons.check_circle),
+                        label: const Text('Đánh dấu hoàn thành'),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(40),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.green[200]!, width: 1),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.quiz_outlined,
+                        size: 48,
+                        color: Colors.green[400],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Nội dung bài tập sẽ được hiển thị ở đây',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.green[600],
+                          fontStyle: FontStyle.italic,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              
+              const SizedBox(height: 32),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildMediaPlayer() {
     if (widget.section.type.toLowerCase() == 'video') {
       return _buildVideoPlayer();
     } else if (widget.section.type.toLowerCase() == 'audio') {
       return _buildAudioPlayer();
+    } else if (widget.section.type.toLowerCase() == 'exercise') {
+      return _buildExerciseContent();
     } else {
       return _buildTextContent();
     }
@@ -578,14 +791,79 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
         color: Colors.black,
       ),
       child: widget.section.mediaUrl != null && widget.section.mediaUrl!.isNotEmpty
-        ? LessonMediaWidget(
-            key: _mediaWidgetKey,
-            videoUrl: widget.section.mediaUrl,
-            width: double.infinity,
-            height: double.infinity,
-            enableAutoPlay: !_isCompleted, // Don't autoplay if already completed
-            showControls: true,
-            onProgressUpdate: _updateProgress,
+        ? Stack(
+            children: [
+              // Video player
+              LessonMediaWidget(
+                key: _mediaWidgetKey,
+                videoUrl: widget.section.mediaUrl,
+                width: double.infinity,
+                height: double.infinity,
+                enableAutoPlay: !_isCompleted, // Don't autoplay if already completed
+                showControls: true,
+                onProgressUpdate: _updateProgress,
+              ),
+              
+              // Custom overlay for better UX
+              if (_isCompleted)
+                Positioned.fill(
+                  child: Container(
+                    color: Colors.black.withOpacity(0.3),
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.check_circle,
+                              color: Colors.green,
+                              size: 48,
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Video đã hoàn thành!',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Tiến độ: ${(_progress * 100).toInt()}%',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: _restartSection,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _getCategoryColor(widget.lesson.category),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24, 
+                                  vertical: 12
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text('Xem lại'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           )
         : _buildVideoPlaceholder(),
     );
@@ -644,16 +922,21 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Audio visualization or player
-          SizedBox(
-            height: 200,
-            width: 200,
+          // Audio visualization or player - increased size
+          Container(
+            height: MediaQuery.of(context).size.height * 0.4, // 40% of screen height
+            width: MediaQuery.of(context).size.width * 0.9, // 90% of screen width
+            constraints: const BoxConstraints(
+              minHeight: 280,
+              maxHeight: 400,
+              minWidth: 320,
+            ),
             child: widget.section.mediaUrl != null && widget.section.mediaUrl!.isNotEmpty
               ? LessonMediaWidget(
                   key: _mediaWidgetKey,
                   audioUrl: widget.section.mediaUrl,
-                  width: 200,
-                  height: 200,
+                  width: double.infinity,
+                  height: double.infinity,
                   enableAutoPlay: !_isCompleted, // Don't autoplay if already completed
                   showControls: true,
                   onProgressUpdate: _updateProgress,
@@ -661,19 +944,37 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
               : _buildAudioPlaceholder(),
           ),
           
-          const SizedBox(height: 20),
+          const SizedBox(height: 30),
           
           // Title and description
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              widget.section.title,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-              textAlign: TextAlign.center,
+            child: Column(
+              children: [
+                Text(
+                  widget.section.title,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                if (widget.section.content.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    widget.section.content,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.white70,
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
             ),
           ),
         ],
@@ -716,58 +1017,141 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
   Widget _buildTextContent() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(40),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.grey[900]!,
-            Colors.black,
+            Colors.grey[100]!,
+            Colors.white,
           ],
         ),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.article_rounded,
-            size: 80,
-            color: Colors.white.withOpacity(0.6),
-          ),
-          
-          const SizedBox(height: 30),
-          
-          Text(
-            widget.section.title,
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          
-          const SizedBox(height: 20),
-          
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withOpacity(0.2)),
-            ),
-            child: Text(
-              widget.section.content,
-              style: const TextStyle(
-                fontSize: 18,
-                color: Colors.white,
-                height: 1.6,
+      child: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with icon and category
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: _getCategoryColor(widget.lesson.category).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: _getCategoryColor(widget.lesson.category).withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: _getCategoryColor(widget.lesson.category),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.article_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.section.title,
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: _getCategoryColor(widget.lesson.category),
+                              height: 1.3,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _getSectionTypeText(widget.section.type),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: _getCategoryColor(widget.lesson.category).withOpacity(0.7),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              textAlign: TextAlign.center,
-            ),
+              
+              const SizedBox(height: 32),
+              
+              // Content
+              if (widget.section.content.isNotEmpty) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    widget.section.content,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      color: Colors.black87,
+                      height: 1.7,
+                      letterSpacing: 0.2,
+                    ),
+                    textAlign: TextAlign.justify,
+                  ),
+                ),
+              ] else ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(40),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey[200]!, width: 1),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.article_outlined,
+                        size: 48,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Nội dung văn bản sẽ được hiển thị ở đây',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                          fontStyle: FontStyle.italic,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              
+              const SizedBox(height: 32),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
