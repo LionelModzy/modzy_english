@@ -39,412 +39,405 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           isLoading = false;
         });
       }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
-      }
+    } catch (_) {
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
   Future<void> _signOut() async {
-    try {
-      // Only clear credentials if remember me is not enabled
-      final rememberMe = await PreferencesService.getRememberMe();
-      if (!rememberMe) {
-        await PreferencesService.clearCredentials();
-      }
-      await AuthRepository.signOut();
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-          (route) => false,
-        );
-      }
-    } catch (e) {
-      // Error handling already done in AuthRepository
+    final rememberMe = await PreferencesService.getRememberMe();
+    if (!rememberMe) await PreferencesService.clearCredentials();
+    await AuthRepository.signOut();
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (_) => false,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     if (isLoading) {
       return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Welcome Back!',
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          currentUser?.displayName ?? 'User',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      Container(
-                        height: 60,
-                        width: 60,
-                        decoration: BoxDecoration(
-                          gradient: AppColors.primaryGradient,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withOpacity(0.3),
-                              blurRadius: 12,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: IconButton(
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => const ProfileScreen(),
-                              ),
-                            ).then((_) => _loadUserData());
-                          },
-                          icon: const Icon(
-                            Icons.person_rounded,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Container(
-                        height: 60,
-                        width: 60,
-                        decoration: BoxDecoration(
-                          gradient: AppColors.primaryGradient,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withOpacity(0.3),
-                              blurRadius: 12,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: IconButton(
-                          onPressed: _signOut,
-                          icon: const Icon(
-                            Icons.logout_rounded,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isTablet = constraints.maxWidth >= 600;
+            final gridCrossAxisCount = isTablet ? 3 : 2;
 
-              // Progress Card
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.trending_up_rounded,
-                          color: Colors.white,
-                          size: 32,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Your Progress',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              Text(
-                                'Level ${currentUser?.currentLevel ?? 1} - ${currentUser?.levelName ?? "Beginner"}',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.white70,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _Header(
+                    displayName: currentUser?.displayName ?? 'User',
+                    onProfileTap: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                      );
+                      _loadUserData();
+                    },
+                    onLogoutTap: _signOut,
+                  ),
+                  const SizedBox(height: 20),
+
+                  _ProgressCard(user: currentUser, isDark: isDark),
+                  const SizedBox(height: 20),
+
+                  if (currentUser?.isAdmin == true) ...[
+                    _AdminCard(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+                        );
+                      },
+                      isDark: isDark,
                     ),
                     const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildStatItem(
-                            icon: Icons.book_rounded,
-                            label: 'Lessons',
-                            value: '${currentUser?.totalLessonsCompleted ?? 0}',
-                          ),
-                        ),
-                        Expanded(
-                          child: _buildStatItem(
-                            icon: Icons.language_rounded,
-                            label: 'Vocabulary',
-                            value: '${currentUser?.totalVocabularyLearned ?? 0}',
-                          ),
-                        ),
-                        Expanded(
-                          child: _buildStatItem(
-                            icon: Icons.percent_rounded,
-                            label: 'Progress',
-                            value: '${(currentUser?.progressPercentage ?? 0.0).toInt()}%',
-                          ),
-                        ),
-                      ],
-                    ),
                   ],
-                ),
-              ),
-              const SizedBox(height: 32),
 
-              // Admin Access (if user is admin)
-              if (currentUser?.isAdmin == true) ...[
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: AppColors.adminGradient,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.adminPrimary.withOpacity(0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
+                  Text(
+                    'Quick Actions',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  child: Column(
+                  const SizedBox(height: 12),
+
+                  GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: gridCrossAxisCount,
+                    mainAxisSpacing: 14,
+                    crossAxisSpacing: 14,
+                    childAspectRatio: isTablet ? 1.2 : 1.3,
                     children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.admin_panel_settings_rounded,
-                            color: Colors.white,
-                            size: 32,
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Admin Panel',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                Text(
-                                  'Manage users, content, and analytics',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.white70,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      CustomButton(
-                        text: 'Open Admin Dashboard',
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const AdminDashboardScreen(),
-                            ),
-                          );
+                      _ActionCard(
+                        icon: Icons.play_lesson_rounded,
+                        title: 'Start Lesson',
+                        subtitle: 'Begin learning',
+                        color: AppColors.primary,
+                        onTap: () {
+                          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LessonsScreen()));
                         },
-                        isAdmin: true,
-                        icon: Icons.dashboard_rounded,
-                        textColor: Colors.white,
+                        isDark: isDark,
+                      ),
+                      _ActionCard(
+                        icon: Icons.quiz_rounded,
+                        title: 'Take Quiz',
+                        subtitle: 'Test knowledge',
+                        color: AppColors.secondary,
+                        onTap: () {
+                          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QuizListScreen()));
+                        },
+                        isDark: isDark,
+                      ),
+                      _ActionCard(
+                        icon: Icons.library_books_rounded,
+                        title: 'Vocabulary',
+                        subtitle: 'Learn words',
+                        color: AppColors.accent,
+                        onTap: () {
+                          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VocabularyScreen()));
+                        },
+                        isDark: isDark,
+                      ),
+                      _ActionCard(
+                        icon: Icons.videocam_rounded,
+                        title: 'Watch Videos',
+                        subtitle: 'English videos',
+                        color: AppColors.success,
+                        onTap: () {
+                          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VideoScreen()));
+                        },
+                        isDark: isDark,
                       ),
                     ],
-                  ),
-                ),
-                const SizedBox(height: 32),
-              ],
-
-              // Quick Actions
-              Text(
-                'Quick Actions',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: 1.3,
-                children: [
-                  _buildActionCard(
-                    icon: Icons.play_lesson_rounded,
-                    title: 'Start Lesson',
-                    subtitle: 'Begin learning',
-                    color: AppColors.primary,
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const LessonsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildActionCard(
-                    icon: Icons.quiz_rounded,
-                    title: 'Take Quiz',
-                    subtitle: 'Test knowledge',
-                    color: AppColors.secondary,
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const QuizListScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildActionCard(
-                    icon: Icons.library_books_rounded,
-                    title: 'Vocabulary',
-                    subtitle: 'Learn words',
-                    color: AppColors.accent,
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const VocabularyScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildActionCard(
-                    icon: Icons.videocam_rounded,
-                    title: 'Watch Videos',
-                    subtitle: 'English videos',
-                    color: AppColors.success,
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const VideoScreen(),
-                        ),
-                      );
-                    },
                   ),
                 ],
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
   }
+}
 
-  Widget _buildStatItem({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Column(
+class _Header extends StatelessWidget {
+  final String displayName;
+  final VoidCallback onProfileTap;
+  final VoidCallback onLogoutTap;
+
+  const _Header({
+    required this.displayName,
+    required this.onProfileTap,
+    required this.onLogoutTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
       children: [
-        Icon(icon, color: Colors.white, size: 24),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Welcome Back!',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                displayName,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
         ),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.white70,
-          ),
-        ),
+        _CircleButton(icon: Icons.person, onTap: onProfileTap),
+        const SizedBox(width: 10),
+        _CircleButton(icon: Icons.logout, onTap: onLogoutTap),
       ],
     );
   }
+}
 
-  Widget _buildActionCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
+class _CircleButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _CircleButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 56,
+      width: 56,
+      decoration: BoxDecoration(
+        gradient: AppColors.primaryGradient,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.25),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: IconButton(
+        onPressed: onTap,
+        icon: Icon(icon, color: Colors.white, size: 22),
+      ),
+    );
+  }
+}
+
+class _ProgressCard extends StatelessWidget {
+  final UserModel? user;
+  final bool isDark;
+
+  const _ProgressCard({this.user, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: AppColors.primaryGradient,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.2),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.trending_up, color: Colors.white, size: 30),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Your Progress',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      'Level ${user?.currentLevel ?? 1} - ${user?.levelName ?? "Beginner"}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              _StatItem(icon: Icons.book, label: 'Lessons', value: '${user?.totalLessonsCompleted ?? 0}'),
+              _StatItem(icon: Icons.language, label: 'Vocabulary', value: '${user?.totalVocabularyLearned ?? 0}'),
+              _StatItem(icon: Icons.percent, label: 'Progress', value: '${(user?.progressPercentage ?? 0).toInt()}%'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _StatItem({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Icon(icon, color: Colors.white, size: 22),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: Colors.white70),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminCard extends StatelessWidget {
+  final VoidCallback onTap;
+  final bool isDark;
+
+  const _AdminCard({required this.onTap, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: AppColors.adminGradient,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.adminPrimary.withOpacity(0.25),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.admin_panel_settings, color: Colors.white, size: 30),
+              SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  'Admin Panel',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          CustomButton(
+            text: 'Open Admin Dashboard',
+            onPressed: onTap,
+            isAdmin: true,
+            icon: Icons.dashboard,
+            textColor: Colors.white,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+  final bool isDark;
+
+  const _ActionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = isDark ? Colors.white : AppColors.textPrimary;
+
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-              child: Container(
-        padding: const EdgeInsets.all(16),
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.2), width: 2),
+          color: isDark ? Colors.grey[850] : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: color.withOpacity(0.2), width: 1.5),
           boxShadow: [
             BoxShadow(
               color: color.withOpacity(0.1),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -452,43 +445,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 28,
-              ),
+              child: Icon(icon, color: color, size: 26),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               title,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+                color: textColor,
               ),
               textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 2),
             Text(
               subtitle,
-              style: TextStyle(
-                fontSize: 11,
-                color: AppColors.textSecondary,
-              ),
+              style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.7)),
               textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
       ),
     );
   }
-} 
+}

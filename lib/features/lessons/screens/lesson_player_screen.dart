@@ -133,26 +133,48 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
         );
         
         if (savedProgress != null) {
-          // We'll use this data once the media widget has initialized
-          _hasLoadedSavedPosition = true;
-          _progress = savedProgress['progress'] ?? 0.0;
-          _currentPosition = Duration(seconds: savedProgress['positionInSeconds'] ?? 0);
-          if (savedProgress['durationInSeconds'] != null) {
-            _totalDuration = Duration(seconds: savedProgress['durationInSeconds']);
-          }
-          
-          // Let the user know we've restored their progress
-          if (_progress > 0.05 && _progress < 0.95) {
-            Future.delayed(const Duration(seconds: 1), () {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Đã khôi phục tiến độ (${(_progress * 100).toInt()}%)'),
-                    backgroundColor: _getCategoryColor(widget.lesson.category),
-                    duration: const Duration(seconds: 3),
-                  ),
-                );
-              }
+          // Extract saved fields with proper types
+          final double savedProg = (savedProgress['progress'] ?? 0.0).toDouble();
+          final int savedPositionSec = savedProgress['positionInSeconds'] ?? 0;
+          final int? savedDurationSec = savedProgress['durationInSeconds'];
+          final bool savedCompleted = savedProgress['completed'] ?? false;
+
+          // Only restore progress when it is meaningful (<95%) and not marked completed
+          final bool shouldRestore = !savedCompleted && savedProg < 0.95;
+
+          if (shouldRestore) {
+            // We'll use this data once the media widget has initialized
+            _hasLoadedSavedPosition = true;
+            _progress = savedProg;
+            _currentPosition = Duration(seconds: savedPositionSec);
+            if (savedDurationSec != null) {
+              _totalDuration = Duration(seconds: savedDurationSec);
+            }
+
+            // Notify user that progress has been restored
+            if (_progress > 0.05) {
+              Future.delayed(const Duration(seconds: 1), () {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Đã khôi phục tiến độ (${(_progress * 100).toInt()}%)'),
+                      backgroundColor: _getCategoryColor(widget.lesson.category),
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                }
+              });
+            }
+          } else {
+            // Either completed or near completion -> start fresh
+            _hasLoadedSavedPosition = false;
+            _progress = 0.0;
+            _currentPosition = Duration.zero;
+            _totalDuration = Duration.zero;
+
+            // Also treat the section as not completed in the UI so user can replay normally
+            setState(() {
+              _isCompleted = false;
             });
           }
         }

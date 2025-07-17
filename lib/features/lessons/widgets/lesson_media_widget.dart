@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import 'package:chewie/chewie.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/services.dart';
 import '../../../core/constants/app_colors.dart';
 
 class LessonMediaWidget extends StatefulWidget {
@@ -35,6 +37,7 @@ class LessonMediaWidget extends StatefulWidget {
 
 class LessonMediaWidgetState extends State<LessonMediaWidget> {
   VideoPlayerController? _videoController;
+  ChewieController? _chewieController;
   AudioPlayer? _audioPlayer;
   bool _isVideoPlaying = false;
   bool _isAudioPlaying = false;
@@ -50,6 +53,7 @@ class LessonMediaWidgetState extends State<LessonMediaWidget> {
 
   @override
   void dispose() {
+    _chewieController?.dispose();
     _videoController?.dispose();
     _audioPlayer?.dispose();
     super.dispose();
@@ -69,6 +73,25 @@ class LessonMediaWidgetState extends State<LessonMediaWidget> {
       
       _videoController = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl!));
       await _videoController!.initialize();
+
+      // Create Chewie controller for better UI & fullscreen support
+      _chewieController = ChewieController(
+        videoPlayerController: _videoController!,
+        aspectRatio: _videoController!.value.aspectRatio == 0
+            ? 16 / 9
+            : _videoController!.value.aspectRatio,
+        autoPlay: widget.enableAutoPlay,
+        looping: false,
+        allowFullScreen: true,
+        allowMuting: true,
+        deviceOrientationsOnEnterFullScreen: const [
+          DeviceOrientation.landscapeLeft,
+          DeviceOrientation.landscapeRight,
+        ],
+        deviceOrientationsAfterFullScreen: const [
+          DeviceOrientation.portraitUp,
+        ],
+      );
       
       _videoController!.addListener(() {
         setState(() {
@@ -283,7 +306,7 @@ class LessonMediaWidgetState extends State<LessonMediaWidget> {
   }
 
   Widget _buildVideoPlayer() {
-    if (_videoController == null || !_videoController!.value.isInitialized) {
+    if (_chewieController == null || !_videoController!.value.isInitialized) {
       return _buildVideoPlaceholder();
     }
 
@@ -298,207 +321,7 @@ class LessonMediaWidgetState extends State<LessonMediaWidget> {
         ),
         child: ClipRRect(
           borderRadius: widget.borderRadius ?? BorderRadius.circular(16),
-          child: Stack(
-            children: [
-              // Video player
-              SizedBox(
-                width: double.infinity,
-                height: double.infinity,
-                child: FittedBox(
-                  fit: BoxFit.contain,
-                  child: SizedBox(
-                    width: _videoController!.value.size.width,
-                    height: _videoController!.value.size.height,
-                    child: VideoPlayer(_videoController!),
-                  ),
-                ),
-              ),
-              
-              // Controls overlay
-              if (widget.showControls)
-                Positioned.fill(
-                  child: GestureDetector(
-                    onTap: _playPauseVideo,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withOpacity(0.2),
-                            Colors.black.withOpacity(0.5),
-                          ],
-                        ),
-                      ),
-                      child: Stack(
-                        children: [
-                          // Center controls
-                          Center(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                // Skip backward
-                                InkWell(
-                                  onTap: skipBackward,
-                                  child: Container(
-                                    width: 44,
-                                    height: 44,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.7),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.replay_5,
-                                      color: Colors.red,
-                                      size: 24,
-                                    ),
-                                  ),
-                                ),
-                                
-                                const SizedBox(width: 16),
-                                
-                                // Play/Pause button
-                                InkWell(
-                                  onTap: _playPauseVideo,
-                                  child: Container(
-                                    width: 60,
-                                    height: 60,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.9),
-                                      shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.3),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Icon(
-                                      _isVideoPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                                      color: Colors.red,
-                                      size: 32,
-                                    ),
-                                  ),
-                                ),
-                                
-                                const SizedBox(width: 16),
-                                
-                                // Skip forward
-                                InkWell(
-                                  onTap: skipForward,
-                                  child: Container(
-                                    width: 44,
-                                    height: 44,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.7),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.forward_5,
-                                      color: Colors.red,
-                                      size: 24,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          
-                          // Bottom progress controls
-                          Positioned(
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.transparent,
-                                    Colors.black.withOpacity(0.8),
-                                  ],
-                                ),
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // Slider for precise control
-                                  SliderTheme(
-                                    data: SliderThemeData(
-                                      trackHeight: 4,
-                                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                                    ),
-                                    child: Slider(
-                                      value: _videoController!.value.position.inMilliseconds.toDouble(),
-                                      min: 0,
-                                      max: _videoController!.value.duration.inMilliseconds.toDouble(),
-                                      activeColor: Colors.red,
-                                      inactiveColor: Colors.white.withOpacity(0.3),
-                                      onChanged: (value) {
-                                        _videoController!.seekTo(Duration(milliseconds: value.toInt()));
-                                      },
-                                    ),
-                                  ),
-                                  
-                                  // Time display
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          _formatDuration(_videoController!.value.position),
-                                          style: const TextStyle(color: Colors.white, fontSize: 12),
-                                        ),
-                                        Text(
-                                          _formatDuration(_videoController!.value.duration),
-                                          style: const TextStyle(color: Colors.white, fontSize: 12),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              
-              // Video label
-              Positioned(
-                top: 12,
-                left: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.videocam, color: Colors.white, size: 12),
-                      SizedBox(width: 4),
-                      Text(
-                        'Video',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+          child: Chewie(controller: _chewieController!),
         ),
       ),
     );
