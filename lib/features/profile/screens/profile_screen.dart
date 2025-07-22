@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/custom_button.dart';
+import '../../../core/widgets/profile_image_viewer.dart';
 import '../../../core/services/preferences_service.dart';
 import '../../../models/user_model.dart';
 import '../../auth/data/auth_repository.dart';
@@ -11,6 +12,7 @@ import 'edit_profile_screen.dart';
 import 'settings_screen.dart';
 import 'learning_history_screen.dart';
 import 'favorites_screen.dart';
+import '../../../core/services/user_progress_utils.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -38,13 +40,85 @@ class _ProfileScreenState extends State<ProfileScreen> {
           isLoading = false;
         });
       }
-    } catch (e) {
+      // Sync progress after loading user
+      await UserProgressUtils.syncUserProgressWithStats();
+      // Reload user data to get updated progress
+      final updatedUser = await AuthRepository.getCurrentUserData();
       if (mounted) {
         setState(() {
-          isLoading = false;
+          currentUser = updatedUser;
         });
       }
+    } catch (_) {
+      if (mounted) setState(() => isLoading = false);
     }
+  }
+
+  /// Extract public ID from Cloudinary URL for deletion
+  String? _extractPublicIdFromUrl(String? url) {
+    if (url == null || url.isEmpty) return null;
+    
+    try {
+      print('Extracting public ID from URL: $url');
+      
+      // Cloudinary URL format: https://res.cloudinary.com/[cloud]/image/upload/[transformations]/[folder]/[public_id].[extension]
+      final uri = Uri.parse(url);
+      final pathSegments = uri.pathSegments;
+      
+      print('Path segments: $pathSegments');
+      
+      // Find the upload segment index
+      int uploadIndex = -1;
+      for (int i = 0; i < pathSegments.length; i++) {
+        if (pathSegments[i] == 'upload') {
+          uploadIndex = i;
+          break;
+        }
+      }
+      
+      if (uploadIndex != -1 && pathSegments.length > uploadIndex + 1) {
+        // Get the part after upload, skipping transformations if any
+        String pathAfterUpload = pathSegments.sublist(uploadIndex + 1).join('/');
+        
+        print('Path after upload: $pathAfterUpload');
+        
+        // Remove file extension
+        final lastDotIndex = pathAfterUpload.lastIndexOf('.');
+        if (lastDotIndex != -1) {
+          pathAfterUpload = pathAfterUpload.substring(0, lastDotIndex);
+        }
+        
+        print('Path after removing extension: $pathAfterUpload');
+        
+        // Handle transformations (e.g., w_300,h_300,c_fill)
+        // If the path contains transformation parameters, we need to extract the actual public ID
+        if (pathAfterUpload.contains('/')) {
+          final parts = pathAfterUpload.split('/');
+          print('Parts after splitting: $parts');
+          
+          // Find the folder name (profile_images) and get everything after it
+          for (int i = 0; i < parts.length; i++) {
+            if (parts[i] == 'profile_images' && i + 1 < parts.length) {
+              final publicId = parts.sublist(i + 1).join('/');
+              print('Extracted public ID: $publicId');
+              return publicId;
+            }
+          }
+          
+          // If no profile_images folder found, return the last part
+          final publicId = parts.last;
+          print('Using last part as public ID: $publicId');
+          return publicId;
+        }
+        
+        print('Final public ID: $pathAfterUpload');
+        return pathAfterUpload;
+      }
+    } catch (e) {
+      print('Error extracting public ID from URL: $e');
+    }
+    
+    return null;
   }
 
   Future<void> _signOut() async {
@@ -171,54 +245,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 children: [
                   // Profile Avatar
-                  Stack(
-                    children: [
-                      Container(
-                        height: 100,
-                        width: 100,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white,
-                          border: Border.all(color: Colors.white, width: 4),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: currentUser?.profileImageUrl != null
-                            ? ClipOval(
-                                child: Image.network(
-                                  currentUser!.profileImageUrl!,
-                                  fit: BoxFit.cover,
-                                ),
-                              )
-                            : Icon(
-                                Icons.person_rounded,
-                                size: 60,
-                                color: AppColors.primary,
-                              ),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: AppColors.primary, width: 2),
+                  ProfileImageViewer(
+                    imageUrl: currentUser?.profileImageUrl,
+                    size: 100,
+                    showEditButton: true,
+                    currentImagePublicId: _extractPublicIdFromUrl(currentUser?.profileImageUrl),
+                    userName: currentUser?.displayName,
+                    onImageSelected: (String imageUrl) async {
+                      try {
+                        await AuthRepository.updateUserProfile(
+                          uid: currentUser!.uid,
+                          displayName: currentUser!.displayName,
+                          profileImageUrl: imageUrl,
+                        );
+                        // Reload user data
+                        _loadUserData();
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Lỗi cập nhật ảnh: $e'),
+                            backgroundColor: AppColors.error,
                           ),
-                          child: Icon(
-                            Icons.camera_alt_rounded,
-                            color: AppColors.primary,
-                            size: 16,
-                          ),
-                        ),
-                      ),
-                    ],
+                        );
+                      }
+                    },
                   ),
                   const SizedBox(height: 16),
                   Text(

@@ -263,8 +263,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: 1,
-                mainAxisSpacing: 12, // Reduced from 16
-                childAspectRatio: 5.5, // Increased from 5.0 to give more space
+                mainAxisSpacing: 8, // Further reduced spacing
+                childAspectRatio: 6.0, // Increased aspect ratio for more space
                 children: [
                   _buildActionCard(
                     icon: Icons.people_rounded,
@@ -282,7 +282,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   _buildActionCard(
                     icon: Icons.library_books_rounded,
                     title: 'Quản lý Bài học',
-                    subtitle: 'Tạo, chỉnh sửa, tổ chức bài học', // Rút gọn subtitle
+                    subtitle: 'Tạo, chỉnh sửa bài học',
                     color: AppColors.secondary,
                     onTap: () {
                       Navigator.of(context).push(
@@ -308,7 +308,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   _buildActionCard(
                     icon: Icons.quiz_rounded,
                     title: 'Quản lý Quiz',
-                    subtitle: 'Tạo và quản lý bài kiểm tra thực hành cho người dùng',
+                    subtitle: 'Tạo và quản lý bài kiểm tra',
                     color: const Color(0xFF8B5CF6),
                     onTap: () {
                       Navigator.of(context).push(
@@ -320,8 +320,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                   _buildActionCard(
                     icon: Icons.video_library_rounded,
-                    title: 'Hệ thống Tải lên Media',
-                    subtitle: 'Demo tích hợp Firebase Storage + Cloudinary',
+                    title: 'Tải lên Media',
+                    subtitle: 'Demo Firebase Storage + Cloudinary',
                     color: AppColors.accent,
                     onTap: () {
                       Navigator.of(context).push(
@@ -334,7 +334,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   _buildActionCard(
                     icon: Icons.analytics_rounded,
                     title: 'Phân tích & Thống kê',
-                    subtitle: 'Xem thống kê nền tảng và tiến độ người dùng',
+                    subtitle: 'Xem thống kê nền tảng',
                     color: AppColors.success,
                     onTap: () {
                       Navigator.of(context).push(
@@ -347,7 +347,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   _buildActionCard(
                     icon: Icons.settings_rounded,
                     title: 'Cài đặt Hệ thống',
-                    subtitle: 'Cấu hình cài đặt ứng dụng và tùy chọn',
+                    subtitle: 'Cấu hình ứng dụng',
                     color: AppColors.adminPrimary,
                     onTap: () {
                       _showComingSoonDialog('Cài đặt Hệ thống');
@@ -527,59 +527,61 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(12), // Reduced from 16
+        padding: const EdgeInsets.all(10), // Further reduced padding
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12), // Reduced from 16
+          borderRadius: BorderRadius.circular(10), // Reduced from 12
           border: Border.all(color: color.withOpacity(0.2), width: 1),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.06), // Reduced opacity
-              blurRadius: 8, // Reduced from 12
-              offset: const Offset(0, 2), // Reduced from 4
+              color: color.withOpacity(0.06),
+              blurRadius: 6, // Reduced from 8
+              offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8), // Reduced from 10
+              padding: const EdgeInsets.all(6), // Reduced from 8
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8), // Reduced from 10
+                borderRadius: BorderRadius.circular(6), // Reduced from 8
               ),
               child: Icon(
                 icon,
                 color: color,
-                size: 18, // Reduced from 20
+                size: 16, // Reduced from 18
               ),
             ),
-            const SizedBox(width: 10), // Reduced from 12
+            const SizedBox(width: 8), // Reduced from 10
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min, // Added to prevent overflow
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     title,
                     style: const TextStyle(
-                      fontSize: 14, // Reduced from 15
+                      fontSize: 13, // Reduced from 14
                       fontWeight: FontWeight.bold,
                       color: AppColors.textPrimary,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 1), // Reduced from 2
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 11, // Reduced from 12
-                      color: AppColors.textSecondary,
+                  const SizedBox(height: 1),
+                  Flexible(
+                    child: Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 10, // Reduced from 11
+                        color: AppColors.textSecondary,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -587,7 +589,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             const Icon(
               Icons.arrow_forward_ios_rounded,
               color: AppColors.textSecondary,
-              size: 14, // Reduced from 16
+              size: 12, // Reduced from 14
             ),
           ],
         ),

@@ -13,6 +13,7 @@ import '../../../core/services/translation_service.dart';
 import '../../../models/vocab_model.dart';
 import '../../auth/data/auth_repository.dart';
 import 'package:audioplayers/audioplayers.dart';
+import '../../vocabulary/screens/vocabulary_detail_screen.dart';
 
 class VocabularyManagementScreen extends StatefulWidget {
   const VocabularyManagementScreen({super.key});
@@ -29,6 +30,12 @@ class _VocabularyManagementScreenState extends State<VocabularyManagementScreen>
   bool _isLoading = true;
   String _searchQuery = '';
   String _selectedCategory = 'Tất cả';
+  String _selectedPartOfSpeech = 'Tất cả';
+  String _selectedDifficulty = 'Tất cả';
+  DateTime? _startDate;
+  DateTime? _endDate;
+  String _sortOption = 'Mới nhất';
+  bool _showFilters = false;
   
   final TextEditingController _searchController = TextEditingController();
   
@@ -40,11 +47,30 @@ class _VocabularyManagementScreenState extends State<VocabularyManagementScreen>
     'Listening': 'Nghe',
     'Writing': 'Viết',
   };
+  final List<String> _partsOfSpeech = [
+    'Tất cả',
+    'noun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction', 'interjection', 'pronoun'
+  ];
+  final Map<String, String> _partOfSpeechVietnamese = {
+    'noun': 'Danh từ',
+    'verb': 'Động từ',
+    'adjective': 'Tính từ',
+    'adverb': 'Trạng từ',
+    'preposition': 'Giới từ',
+    'conjunction': 'Liên từ',
+    'interjection': 'Thán từ',
+    'pronoun': 'Đại từ',
+  };
+  final List<String> _difficultyLevels = ['Tất cả', '1', '2', '3', '4', '5'];
+  final List<String> _difficultyNames = ['Cơ bản', 'Sơ cấp', 'Trung cấp', 'Trung cấp cao', 'Nâng cao'];
+  final List<String> _sortOptions = [
+    'Mới nhất', 'Cũ nhất', 'A-Z', 'Z-A', 'Độ khó tăng', 'Độ khó giảm', 'Sử dụng nhiều', 'Sử dụng ít'
+  ];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _loadVocabularies();
   }
 
@@ -93,6 +119,54 @@ class _VocabularyManagementScreenState extends State<VocabularyManagementScreen>
     // Category filter
     if (_selectedCategory != 'Tất cả') {
       filtered = filtered.where((vocab) => vocab.category == _selectedCategory).toList();
+    }
+
+    // Part of Speech filter
+    if (_selectedPartOfSpeech != 'Tất cả') {
+      filtered = filtered.where((vocab) => vocab.partOfSpeech == _selectedPartOfSpeech).toList();
+    }
+
+    // Difficulty filter
+    if (_selectedDifficulty != 'Tất cả') {
+      filtered = filtered.where((vocab) => vocab.difficultyLevel == int.parse(_selectedDifficulty)).toList();
+    }
+
+    // Date range filter
+    if (_startDate != null || _endDate != null) {
+      filtered = filtered.where((vocab) {
+        final createdAt = vocab.createdAt;
+        final isAfterStart = _startDate == null || !createdAt.isBefore(_startDate!);
+        final isBeforeEnd = _endDate == null || !createdAt.isAfter(_endDate!);
+        return isAfterStart && isBeforeEnd;
+      }).toList();
+    }
+
+    // Sorting
+    switch (_sortOption) {
+      case 'Mới nhất':
+        filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+      case 'Cũ nhất':
+        filtered.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        break;
+      case 'A-Z':
+        filtered.sort((a, b) => a.word.compareTo(b.word));
+        break;
+      case 'Z-A':
+        filtered.sort((a, b) => b.word.compareTo(a.word));
+        break;
+      case 'Độ khó tăng':
+        filtered.sort((a, b) => a.difficultyLevel.compareTo(b.difficultyLevel));
+        break;
+      case 'Độ khó giảm':
+        filtered.sort((a, b) => b.difficultyLevel.compareTo(a.difficultyLevel));
+        break;
+      case 'Sử dụng nhiều':
+        filtered.sort((a, b) => b.usageCount.compareTo(a.usageCount));
+        break;
+      case 'Sử dụng ít':
+        filtered.sort((a, b) => a.usageCount.compareTo(b.usageCount));
+        break;
     }
     
     setState(() {
@@ -159,6 +233,10 @@ class _VocabularyManagementScreenState extends State<VocabularyManagementScreen>
               icon: Icon(Icons.add_rounded),
               text: 'Thêm Mới',
             ),
+            Tab(
+              icon: Icon(Icons.bar_chart_rounded),
+              text: 'Thống Kê',
+            ),
           ],
         ),
       ),
@@ -167,6 +245,7 @@ class _VocabularyManagementScreenState extends State<VocabularyManagementScreen>
         children: [
           _buildListTab(),
           _buildCreateTab(),
+          _buildStatsTab(),
         ],
       ),
     );
@@ -181,112 +260,257 @@ class _VocabularyManagementScreenState extends State<VocabularyManagementScreen>
           color: Colors.white,
           child: Column(
             children: [
-              // Statistics cards
+              // Search and Filter Row (like quiz management)
               Row(
                 children: [
                   Expanded(
-                    child: _buildStatCard(
-                      'Tổng Từ Vựng',
-                      '${_vocabularies.length}',
-                      Icons.library_books_rounded,
-                      AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatCard(
-                      'Có Âm Thanh',
-                      '${_vocabularies.where((v) => v.hasAudio).length}',
-                      Icons.volume_up_rounded,
-                      AppColors.secondary,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatCard(
-                      'Kích Hoạt',
-                      '${_vocabularies.where((v) => v.isActive).length}',
-                      Icons.check_circle_rounded,
-                      AppColors.success,
-                    ),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 20),
-              
-              // Search bar
-              TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Tìm kiếm từ vựng...',
-                  prefixIcon: const Icon(Icons.search_rounded),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _searchQuery = '');
-                            _filterVocabularies();
-                          },
-                          icon: const Icon(Icons.clear_rounded),
-                        )
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                ),
-                onChanged: (value) {
-                  setState(() => _searchQuery = value);
-                  _filterVocabularies();
-                },
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // Category filter
-              Row(
-                children: [
-                  const Text(
-                    'Danh mục:',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      value: _selectedCategory,
+                    child: TextField(
+                      controller: _searchController,
                       decoration: InputDecoration(
+                        hintText: 'Tìm kiếm từ vựng...',
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _searchQuery = '');
+                                  _filterVocabularies();
+                                },
+                                icon: const Icon(Icons.clear_rounded),
+                              )
+                            : null,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        filled: true,
+                        fillColor: Colors.grey[50],
                       ),
-                      items: _categories.map((category) {
-                        return DropdownMenuItem(
-                          value: category,
-                          child: Text(
-                            category == 'Tất cả' ? category : _categoryVietnamese[category] ?? category,
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                        );
-                      }).toList(),
                       onChanged: (value) {
-                        setState(() => _selectedCategory = value!);
+                        setState(() => _searchQuery = value);
                         _filterVocabularies();
                       },
                     ),
                   ),
+                  const SizedBox(width: 12),
+                  IconButton(
+                    onPressed: () => setState(() => _showFilters = !_showFilters),
+                    icon: Icon(
+                      _showFilters ? Icons.filter_list_off : Icons.filter_list,
+                      color: _showFilters ? AppColors.primary : Colors.grey,
+                    ),
+                    tooltip: 'Bộ lọc',
+                  ),
                 ],
               ),
+              if (_showFilters) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.filter_list, color: AppColors.primary, size: 20),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Bộ lọc Từ Vựng',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const Spacer(),
+                          TextButton.icon(
+                            onPressed: _resetFilters,
+                            icon: const Icon(Icons.refresh, size: 16),
+                            label: const Text('Đặt lại'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: _selectedCategory,
+                              decoration: InputDecoration(
+                                labelText: 'Danh mục',
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                              items: _categories.map((cat) => DropdownMenuItem(
+                                value: cat,
+                                child: Text(cat == 'Tất cả' ? cat : _categoryVietnamese[cat] ?? cat, style: const TextStyle(fontSize: 14)),
+                              )).toList(),
+                              onChanged: (value) {
+                                setState(() => _selectedCategory = value ?? 'Tất cả');
+                                _filterVocabularies();
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: _selectedPartOfSpeech,
+                              decoration: InputDecoration(
+                                labelText: 'Từ loại',
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                              items: _partsOfSpeech.map((pos) => DropdownMenuItem(
+                                value: pos,
+                                child: Text(pos == 'Tất cả' ? pos : _partOfSpeechVietnamese[pos] ?? pos, style: const TextStyle(fontSize: 14)),
+                              )).toList(),
+                              onChanged: (value) {
+                                setState(() => _selectedPartOfSpeech = value ?? 'Tất cả');
+                                _filterVocabularies();
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: _selectedDifficulty,
+                              decoration: InputDecoration(
+                                labelText: 'Độ khó',
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                              items: _difficultyLevels.map((diff) => DropdownMenuItem(
+                                value: diff,
+                                child: Text(diff == 'Tất cả' ? diff : 'Cấp $diff', style: const TextStyle(fontSize: 14)),
+                              )).toList(),
+                              onChanged: (value) {
+                                setState(() => _selectedDifficulty = value ?? 'Tất cả');
+                                _filterVocabularies();
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: _sortOption,
+                              decoration: InputDecoration(
+                                labelText: 'Sắp xếp',
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                              items: _sortOptions.map((opt) => DropdownMenuItem(
+                                value: opt,
+                                child: Text(opt, style: const TextStyle(fontSize: 14)),
+                              )).toList(),
+                              onChanged: (value) {
+                                setState(() => _sortOption = value ?? 'Mới nhất');
+                                _filterVocabularies();
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              onTap: () async {
+                                final date = await showDatePicker(
+                                  context: context,
+                                  initialDate: _startDate ?? DateTime.now(),
+                                  firstDate: DateTime(2020),
+                                  lastDate: DateTime.now(),
+                                );
+                                if (date != null) {
+                                  setState(() => _startDate = date);
+                                  _filterVocabularies();
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey.shade400),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.calendar_today, size: 16, color: AppColors.primary),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _startDate != null 
+                                          ? '${_startDate!.day}/${_startDate!.month}/${_startDate!.year}'
+                                          : 'Từ ngày',
+                                      style: TextStyle(
+                                        color: _startDate != null ? AppColors.textPrimary : Colors.grey,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: InkWell(
+                              onTap: () async {
+                                final date = await showDatePicker(
+                                  context: context,
+                                  initialDate: _endDate ?? DateTime.now(),
+                                  firstDate: DateTime(2020),
+                                  lastDate: DateTime.now(),
+                                );
+                                if (date != null) {
+                                  setState(() => _endDate = date);
+                                  _filterVocabularies();
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey.shade400),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.calendar_today, size: 16, color: AppColors.primary),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _endDate != null 
+                                          ? '${_endDate!.day}/${_endDate!.month}/${_endDate!.year}'
+                                          : 'Đến ngày',
+                                      style: TextStyle(
+                                        color: _endDate != null ? AppColors.textPrimary : Colors.grey,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 16),
             ],
           ),
         ),
-        
         // Vocabularies list
         Expanded(
           child: _isLoading
@@ -303,6 +527,18 @@ class _VocabularyManagementScreenState extends State<VocabularyManagementScreen>
         ),
       ],
     );
+  }
+
+  void _resetFilters() {
+    setState(() {
+      _selectedCategory = 'Tất cả';
+      _selectedPartOfSpeech = 'Tất cả';
+      _selectedDifficulty = 'Tất cả';
+      _startDate = null;
+      _endDate = null;
+      _sortOption = 'Mới nhất';
+    });
+    _filterVocabularies();
   }
 
   Widget _buildStatCard(String title, String value, IconData icon, Color color) {
@@ -341,202 +577,234 @@ class _VocabularyManagementScreenState extends State<VocabularyManagementScreen>
   }
 
   Widget _buildVocabularyCard(VocabularyModel vocabulary) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        leading: Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: _getCategoryColor(vocabulary.category).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Stack(
-            children: [
-              Center(
-                child: Text(
-                  vocabulary.word.substring(0, 1).toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: _getCategoryColor(vocabulary.category),
-                  ),
-                ),
-              ),
-              if (vocabulary.hasAudio)
-                Positioned(
-                  bottom: 2,
-                  right: 2,
-                  child: Container(
-                    width: 16,
-                    height: 16,
-                    decoration: const BoxDecoration(
-                      color: Colors.blue,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.volume_up,
-                      color: Colors.white,
-                      size: 10,
-                    ),
-                  ),
-                ),
-            ],
-          ),
+    return GestureDetector(
+      onTap: () =>
+          VocabularyDetailScreen.open(context, vocabulary),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+        child: ListTile(
+          contentPadding: const EdgeInsets.all(16),
+          isThreeLine: true, // Cho phép ListTile có nhiều dòng
+          leading: Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: _getCategoryColor(vocabulary.category).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Stack(
               children: [
-                Expanded(
+                Center(
                   child: Text(
-                    vocabulary.word,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: _getCategoryColor(vocabulary.category).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    _categoryVietnamese[vocabulary.category] ?? vocabulary.category,
+                    vocabulary.word.substring(0, 1).toUpperCase(),
                     style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                       color: _getCategoryColor(vocabulary.category),
                     ),
                   ),
                 ),
+                if (vocabulary.hasAudio)
+                  Positioned(
+                    bottom: 2,
+                    right: 2,
+                    child: Container(
+                      width: 16,
+                      height: 16,
+                      decoration: const BoxDecoration(
+                        color: Colors.blue,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.volume_up,
+                        color: Colors.white,
+                        size: 10,
+                      ),
+                    ),
+                  ),
               ],
             ),
-            if (vocabulary.pronunciation.isNotEmpty) ...[
-              const SizedBox(height: 2),
-              Text(
-                vocabulary.pronunciation,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                  fontStyle: FontStyle.italic,
+          ),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      vocabulary.word,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: _getCategoryColor(vocabulary.category).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      _categoryVietnamese[vocabulary.category] ?? vocabulary.category,
+                      style: TextStyle(
+                        fontSize: 8,
+                        fontWeight: FontWeight.w600,
+                        color: _getCategoryColor(vocabulary.category),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (vocabulary.pronunciation.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  vocabulary.pronunciation,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                    fontStyle: FontStyle.italic,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                maxLines: 1,
+              ],
+            ],
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 6),
+              Text(
+                vocabulary.meaning,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textPrimary,
+                ),
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
+              if (vocabulary.partOfSpeech.isNotEmpty) ...[
+                const SizedBox(height: 3),
+                Text(
+                  vocabulary.vietnamesePartOfSpeech,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ],
-          ],
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 8),
-            Text(
-              vocabulary.meaning,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppColors.textPrimary,
+          ),
+          trailing: PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert_rounded),
+            onSelected: (value) {
+              switch (value) {
+                case 'edit':
+                  _editVocabulary(vocabulary);
+                  break;
+                case 'delete':
+                  _deleteVocabulary(vocabulary);
+                  break;
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit_rounded, size: 16),
+                    SizedBox(width: 8),
+                    Text('Chỉnh sửa'),
+                  ],
+                ),
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (vocabulary.partOfSpeech.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                vocabulary.vietnamesePartOfSpeech,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_rounded, size: 16, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Xóa', style: TextStyle(color: Colors.red)),
+                  ],
                 ),
               ),
             ],
-          ],
-        ),
-        trailing: PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert_rounded),
-          onSelected: (value) {
-            switch (value) {
-              case 'edit':
-                _editVocabulary(vocabulary);
-                break;
-              case 'delete':
-                _deleteVocabulary(vocabulary);
-                break;
-            }
-          },
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'edit',
-              child: Row(
-                children: [
-                  Icon(Icons.edit_rounded, size: 16),
-                  SizedBox(width: 8),
-                  Text('Chỉnh sửa'),
-                ],
-              ),
-            ),
-            const PopupMenuItem(
-              value: 'delete',
-              child: Row(
-                children: [
-                  Icon(Icons.delete_rounded, size: 16, color: Colors.red),
-                  SizedBox(width: 8),
-                  Text('Xóa', style: TextStyle(color: Colors.red)),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildEmptyState() {
+    final hasFilters = _selectedCategory != 'Tất cả' ||
+        _selectedPartOfSpeech != 'Tất cả' ||
+        _selectedDifficulty != 'Tất cả' ||
+        _startDate != null ||
+        _endDate != null ||
+        _searchQuery.isNotEmpty;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.library_books_outlined,
+            hasFilters ? Icons.filter_list_off : Icons.library_books_outlined,
             size: 64,
             color: AppColors.textSecondary.withOpacity(0.5),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Chưa có từ vựng nào',
-            style: TextStyle(
+          Text(
+            hasFilters
+                ? 'Không tìm thấy từ vựng phù hợp'
+                : 'Chưa có từ vựng nào',
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
               color: AppColors.textSecondary,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Nhấn tab "Thêm Mới" để tạo từ vựng đầu tiên',
-            style: TextStyle(
+          Text(
+            hasFilters
+                ? 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm'
+                : 'Nhấn tab "Thêm Mới" để tạo từ vựng đầu tiên',
+            style: const TextStyle(
               fontSize: 14,
               color: AppColors.textSecondary,
             ),
           ),
+          const SizedBox(height: 24),
+          if (hasFilters)
+            CustomButton(
+              text: 'Đặt lại bộ lọc',
+              onPressed: () {
+                setState(() {
+                  _resetFilters();
+                  _searchQuery = '';
+                });
+              },
+              color: AppColors.warning,
+              icon: Icons.refresh_rounded,
+            )
         ],
       ),
     );
@@ -606,6 +874,124 @@ class _VocabularyManagementScreenState extends State<VocabularyManagementScreen>
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Xóa'),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsTab() {
+    // Prepare statistics
+    final total = _vocabularies.length;
+    final active = _vocabularies.where((v) => v.isActive).length;
+    final withAudio = _vocabularies.where((v) => v.hasAudio).length;
+    final withImage = _vocabularies.where((v) => v.hasImage).length;
+    final byCategory = <String, int>{};
+    final byPartOfSpeech = <String, int>{};
+    final byDifficulty = <int, int>{};
+    final byDate = <String, int>{};
+    final byUsage = _vocabularies.toList()..sort((a, b) => b.usageCount.compareTo(a.usageCount));
+    for (final v in _vocabularies) {
+      byCategory[v.category] = (byCategory[v.category] ?? 0) + 1;
+      byPartOfSpeech[v.partOfSpeech] = (byPartOfSpeech[v.partOfSpeech] ?? 0) + 1;
+      byDifficulty[v.difficultyLevel] = (byDifficulty[v.difficultyLevel] ?? 0) + 1;
+      final dateStr = '${v.createdAt.year}-${v.createdAt.month.toString().padLeft(2, '0')}';
+      byDate[dateStr] = (byDate[dateStr] ?? 0) + 1;
+    }
+    final topUsed = byUsage.take(5).toList();
+    final leastUsed = byUsage.reversed.take(5).toList();
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: _buildStatCard('Tổng Từ Vựng', '$total', Icons.library_books_rounded, AppColors.primary)),
+              const SizedBox(width: 12),
+              Expanded(child: _buildStatCard('Kích Hoạt', '$active', Icons.check_circle_rounded, AppColors.success)),
+              const SizedBox(width: 12),
+              Expanded(child: _buildStatCard('Có Âm Thanh', '$withAudio', Icons.volume_up_rounded, AppColors.secondary)),
+              const SizedBox(width: 12),
+              Expanded(child: _buildStatCard('Có Hình Ảnh', '$withImage', Icons.image_rounded, Colors.orange)),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Text('Thống kê theo Danh mục', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: byCategory.entries.map((e) => Chip(
+              label: Text('${_categoryVietnamese[e.key] ?? e.key}: ${e.value}'),
+              backgroundColor: AppColors.primary.withOpacity(0.08),
+              labelStyle: const TextStyle(fontWeight: FontWeight.w600),
+            )).toList(),
+          ),
+          const SizedBox(height: 20),
+          Text('Thống kê theo Từ loại', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: byPartOfSpeech.entries.map((e) => Chip(
+              label: Text('${_partOfSpeechVietnamese[e.key] ?? e.key}: ${e.value}'),
+              backgroundColor: Colors.blue.withOpacity(0.08),
+              labelStyle: const TextStyle(fontWeight: FontWeight.w600),
+            )).toList(),
+          ),
+          const SizedBox(height: 20),
+          Text('Thống kê theo Độ khó', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: byDifficulty.entries.map((e) => Chip(
+              label: Text('Cấp ${e.key} (${_difficultyNames[e.key-1]}): ${e.value}'),
+              backgroundColor: Colors.green.withOpacity(0.08),
+              labelStyle: const TextStyle(fontWeight: FontWeight.w600),
+            )).toList(),
+          ),
+          const SizedBox(height: 20),
+          Text('Thống kê theo Tháng tạo', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 60,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: byDate.entries.map((e) => Container(
+                margin: const EdgeInsets.only(right: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.purple.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(e.key, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text('${e.value} từ', style: const TextStyle(fontSize: 12)),
+                  ],
+                ),
+              )).toList(),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text('Từ vựng sử dụng nhiều nhất', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          ...topUsed.map((v) => ListTile(
+            leading: CircleAvatar(child: Text(v.word.substring(0,1).toUpperCase())),
+            title: Text(v.word),
+            subtitle: Text('Số lần sử dụng: ${v.usageCount}'),
+          )),
+          const SizedBox(height: 20),
+          Text('Từ vựng sử dụng ít nhất', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          ...leastUsed.map((v) => ListTile(
+            leading: CircleAvatar(child: Text(v.word.substring(0,1).toUpperCase())),
+            title: Text(v.word),
+            subtitle: Text('Số lần sử dụng: ${v.usageCount}'),
+          )),
         ],
       ),
     );

@@ -3,6 +3,10 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/services/learning_progress_service.dart';
 import '../../../models/lesson_model.dart';
 import '../widgets/lesson_media_widget.dart';
+import '../widgets/unified_video_player.dart';
+import 'dart:async';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class LessonPlayerScreen extends StatefulWidget {
   final LessonModel lesson;
@@ -25,18 +29,12 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   
-  bool _isPlaying = false;
-  bool _isLoading = true;
   bool _isCompleted = false;
-  double _progress = 0.0;
+  bool _isProgressSaved = false;
+  DateTime? _startTime;
+  Timer? _progressTimer;
   Duration _currentPosition = Duration.zero;
-  Duration _totalDuration = Duration.zero; // Remove default duration
-  
-  // Key for LessonMediaWidget
-  final _mediaWidgetKey = GlobalKey<LessonMediaWidgetState>();
-  
-  // Timer for periodic progress tracking
-  late bool _hasLoadedSavedPosition = false;
+  Duration _totalDuration = Duration.zero;
   
   @override
   void initState() {
@@ -57,133 +55,29 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
     
     _animationController.forward();
     
-    // Load saved completion status first
-    _checkCompletionStatus();
+    // Start tracking time when lesson starts
+    _startTime = DateTime.now();
+    _startProgressTimer();
     
-    // Wait for animations to complete before loading media
-    Future.delayed(const Duration(milliseconds: 300), () {
-      _loadMedia();
-    });
-    
-    // Setup periodic progress tracker
-    _setupPeriodicProgressTracker();
+    // Load saved progress
+    _loadSavedProgress();
   }
 
   @override
   void dispose() {
     _animationController.dispose();
-    // Save progress before disposing
-    _saveMediaProgress();
+    _progressTimer?.cancel();
     super.dispose();
   }
   
-  void _setupPeriodicProgressTracker() {
-    // Save progress every 5 seconds
-    Future.delayed(const Duration(seconds: 5), () {
+  void _startProgressTimer() {
+    _progressTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
-        _saveMediaProgress();
-        _setupPeriodicProgressTracker();
-      }
-    });
-  }
-  
-  Future<void> _saveMediaProgress() async {
-    if (_mediaWidgetKey.currentState != null && widget.section.mediaUrl != null) {
-      final mediaType = widget.section.type.toLowerCase();
-      if (mediaType == 'video' || mediaType == 'audio') {
-        await LearningProgressService.trackLessonSectionMediaProgress(
-          lessonId: widget.lesson.id,
-          sectionIndex: widget.sectionIndex,
-          mediaType: mediaType,
-          positionInSeconds: _currentPosition.inSeconds,
-          durationInSeconds: _totalDuration.inSeconds,
-          progress: _progress,
-          completed: _progress >= 0.95, // Consider completed if >95% watched/listened
-        );
-      }
-    }
-  }
-
-  Future<void> _checkCompletionStatus() async {
-    try {
-      final savedProgress = await LearningProgressService.getLessonSectionMediaProgress(
-        lessonId: widget.lesson.id,
-        sectionIndex: widget.sectionIndex,
-      );
-      
-      if (savedProgress != null) {
         setState(() {
-          _isCompleted = savedProgress['completed'] ?? false;
+          // Update UI every second if needed
         });
       }
-    } catch (e) {
-      print('Error checking completion status: $e');
-    }
-  }
-
-  Future<void> _loadMedia() async {
-    setState(() => _isLoading = true);
-    
-    // Try to load saved media progress
-    if (widget.section.mediaUrl != null) {
-      try {
-        final savedProgress = await LearningProgressService.getLessonSectionMediaProgress(
-          lessonId: widget.lesson.id,
-          sectionIndex: widget.sectionIndex,
-        );
-        
-        if (savedProgress != null) {
-          // Extract saved fields with proper types
-          final double savedProg = (savedProgress['progress'] ?? 0.0).toDouble();
-          final int savedPositionSec = savedProgress['positionInSeconds'] ?? 0;
-          final int? savedDurationSec = savedProgress['durationInSeconds'];
-          final bool savedCompleted = savedProgress['completed'] ?? false;
-
-          // Only restore progress when it is meaningful (<95%) and not marked completed
-          final bool shouldRestore = !savedCompleted && savedProg < 0.95;
-
-          if (shouldRestore) {
-            // We'll use this data once the media widget has initialized
-            _hasLoadedSavedPosition = true;
-            _progress = savedProg;
-            _currentPosition = Duration(seconds: savedPositionSec);
-            if (savedDurationSec != null) {
-              _totalDuration = Duration(seconds: savedDurationSec);
-            }
-
-            // Notify user that progress has been restored
-            if (_progress > 0.05) {
-              Future.delayed(const Duration(seconds: 1), () {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Đã khôi phục tiến độ (${(_progress * 100).toInt()}%)'),
-                      backgroundColor: _getCategoryColor(widget.lesson.category),
-                      duration: const Duration(seconds: 3),
-                    ),
-                  );
-                }
-              });
-            }
-          } else {
-            // Either completed or near completion -> start fresh
-            _hasLoadedSavedPosition = false;
-            _progress = 0.0;
-            _currentPosition = Duration.zero;
-            _totalDuration = Duration.zero;
-
-            // Also treat the section as not completed in the UI so user can replay normally
-            setState(() {
-              _isCompleted = false;
-            });
-          }
-        }
-      } catch (e) {
-        print('Error loading saved media progress: $e');
-      }
-    }
-    
-    setState(() => _isLoading = false);
+    });
   }
 
   String _getVietnameseCategory(String englishCategory) {
@@ -228,80 +122,276 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
     }
   }
 
-  void _togglePlayPause() {
-    if (_mediaWidgetKey.currentState != null) {
-      _mediaWidgetKey.currentState!.togglePlayPause();
+  void _onVideoComplete() {
+    if (!_isCompleted) {
+      setState(() => _isCompleted = true);
+      _saveProgress();
+      _showCompletionDialog();
     }
-    setState(() => _isPlaying = !_isPlaying);
   }
 
-  void _updateProgress(double progress, Duration position, Duration total) {
-    if (mounted) {
-      setState(() {
-        _progress = progress;
-        _currentPosition = position;
-        _totalDuration = total;
-        
-        // Mark as completed if progress is >= 95%
-        if (progress >= 0.95 && !_isCompleted) {
-          _isCompleted = true;
-          _showCompletionDialog();
-        }
-      });
+  Future<void> _loadSavedProgress() async {
+    try {
+      final progress = await LearningProgressService.getLessonSectionMediaProgress(
+        lessonId: widget.lesson.id,
+        sectionIndex: widget.sectionIndex,
+      );
       
-      // If we had saved progress, seek to that position once media is loaded
-      if (_hasLoadedSavedPosition && _mediaWidgetKey.currentState != null) {
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (_mediaWidgetKey.currentState != null) {
-            _mediaWidgetKey.currentState!.seekTo(_progress);
-            _hasLoadedSavedPosition = false;
+      if (progress != null && mounted) {
+        setState(() {
+          _isCompleted = progress['completed'] ?? false;
+          if (progress['positionInSeconds'] != null) {
+            _currentPosition = Duration(seconds: progress['positionInSeconds']);
+          }
+          if (progress['durationInSeconds'] != null) {
+            _totalDuration = Duration(seconds: progress['durationInSeconds']);
           }
         });
       }
+    } catch (e) {
+      print('Error loading saved progress: $e');
+    }
+  }
+
+  Future<void> _saveProgress() async {
+    try {
+      final progress = _totalDuration.inSeconds > 0 
+          ? _currentPosition.inSeconds / _totalDuration.inSeconds
+          : 0.0;
+      
+      await LearningProgressService.trackLessonSectionMediaProgress(
+        lessonId: widget.lesson.id,
+        sectionIndex: widget.sectionIndex,
+        mediaType: widget.section.type.toLowerCase(),
+        positionInSeconds: _currentPosition.inSeconds,
+        durationInSeconds: _totalDuration.inSeconds,
+        progress: progress,
+        completed: _isCompleted,
+      );
+      
+      if (mounted) {
+        setState(() {
+          _isProgressSaved = true;
+        });
+        
+        // Reset indicator after 2 seconds
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            setState(() {
+              _isProgressSaved = false;
+            });
+          }
+        });
+      }
+    } catch (e) {
+      print('Error saving progress: $e');
+    }
+  }
+
+  void _onProgressUpdate(Duration position, Duration total) {
+    setState(() {
+      _currentPosition = position;
+      _totalDuration = total;
+    });
+    
+    // Save progress periodically (every 5 seconds)
+    if (position.inSeconds % 5 == 0 && position.inSeconds > 0) {
+      _saveProgress();
     }
   }
   
   void _showCompletionDialog() {
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Hoàn thành!'),
-            content: const Text('Bạn đã hoàn thành phần học này.'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context); // Close dialog
-                },
-                child: const Text('Đóng'),
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.green,
+                borderRadius: BorderRadius.circular(12),
               ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context); // Close dialog
-                  _restartSection();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _getCategoryColor(widget.lesson.category),
+              child: const Icon(
+                Icons.check_circle,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Hoàn thành!',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
                 ),
-                child: const Text('Học lại'),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Bạn đã hoàn thành phần học này thành công!',
+              style: TextStyle(fontSize: 16, height: 1.5),
+              textAlign: TextAlign.center,
+            ),
+            if (widget.sectionIndex < widget.lesson.sections.length - 1) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _getCategoryColor(widget.lesson.category).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _getCategoryColor(widget.lesson.category).withOpacity(0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.arrow_forward,
+                      color: _getCategoryColor(widget.lesson.category),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Tiếp theo: ${widget.lesson.sections[widget.sectionIndex + 1].title}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: _getCategoryColor(widget.lesson.category),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
+          ],
+        ),
+        actions: [
+          TextButton.icon(
+            onPressed: _restartSection,
+            icon: const Icon(Icons.replay),
+            label: const Text('Học lại'),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.grey[600],
+            ),
           ),
-        );
-      }
-    });
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              if (widget.sectionIndex < widget.lesson.sections.length - 1) {
+                _navigateToNextSection();
+              } else {
+                Navigator.pop(context, true); // Go back to lesson list
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _getCategoryColor(widget.lesson.category),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            icon: Icon(
+              widget.sectionIndex < widget.lesson.sections.length - 1 
+                  ? Icons.arrow_forward 
+                  : Icons.check_circle
+            ),
+            label: Text(
+              widget.sectionIndex < widget.lesson.sections.length - 1 
+                  ? 'Tiếp theo' 
+                  : 'Hoàn thành'
+            ),
+          ),
+        ],
+      ),
+    );
   }
   
-  void _restartSection() {
-    if (_mediaWidgetKey.currentState != null) {
-      _mediaWidgetKey.currentState!.seekTo(0.0);
-      _mediaWidgetKey.currentState!.play();
+  void _restartSection() async {
+    setState(() {
+      _isCompleted = false;
+      _startTime = DateTime.now();
+      _currentPosition = Duration.zero;
+      _totalDuration = Duration.zero; // Reset luôn duration
+    });
+    
+    // Save reset progress
+    await _saveProgress();
+    
+    // Close dialog if open
+    Navigator.of(context).popUntil((route) => route.settings.name != '/dialog');
+    
+    // Force reload the screen to reset video
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LessonPlayerScreen(
+          lesson: widget.lesson,
+          section: widget.section,
+          sectionIndex: widget.sectionIndex,
+        ),
+      ),
+    );
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return '$minutes:$seconds';
+  }
+
+  void _navigateToNextSection() {
+    if (widget.sectionIndex < widget.lesson.sections.length - 1) {
+      // Reset progress khi chuyển section
       setState(() {
-        _isCompleted = false;
-        _progress = 0.0;
         _currentPosition = Duration.zero;
+        _totalDuration = Duration.zero;
       });
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => LessonPlayerScreen(
+            lesson: widget.lesson,
+            section: widget.lesson.sections[widget.sectionIndex + 1],
+            sectionIndex: widget.sectionIndex + 1,
+          ),
+        ),
+      );
+    } else {
+      Navigator.pop(context, true);
+    }
+  }
+  
+  void _navigateToPreviousSection() {
+    if (widget.sectionIndex > 0) {
+      // Reset progress khi chuyển section
+      setState(() {
+        _currentPosition = Duration.zero;
+        _totalDuration = Duration.zero;
+      });
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => LessonPlayerScreen(
+            lesson: widget.lesson,
+            section: widget.lesson.sections[widget.sectionIndex - 1],
+            sectionIndex: widget.sectionIndex - 1,
+          ),
+        ),
+      );
+    } else {
+      Navigator.pop(context);
     }
   }
 
@@ -323,12 +413,13 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
                     child: _buildMediaPlayer(),
                   ),
                   
-                  // Progress tracking area
-                  _buildProgressTrackingArea(),
+                  // Simple progress bar
+                  if (widget.section.type.toLowerCase() == 'video' || 
+                      widget.section.type.toLowerCase() == 'audio')
+                    _buildProgressBar(),
                   
-                  // Controls area - conditionally show only for text content
-                  if (widget.section.type.toLowerCase() == 'text')
-                    _buildControlsArea(),
+                  // Navigation controls
+                  _buildNavigationControls(),
                 ],
               ),
               
@@ -339,12 +430,6 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
                 right: 0,
                 child: _buildTopOverlay(),
               ),
-              
-              // Loading overlay
-              if (_isLoading) _buildLoadingOverlay(),
-              
-              // Completed overlay (if needed)
-              if (_isCompleted) _buildCompletedOverlay(),
             ],
           ),
         ),
@@ -365,19 +450,28 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.black.withOpacity(0.7),
+            Colors.black.withOpacity(0.8),
+            Colors.black.withOpacity(0.4),
             Colors.transparent,
           ],
+          stops: const [0.0, 0.7, 1.0],
         ),
       ),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(
-              Icons.arrow_back_rounded,
-              color: Colors.white,
-              size: 28,
+          // Back button with better styling
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(
+                Icons.arrow_back_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
             ),
           ),
           const SizedBox(width: 16),
@@ -388,174 +482,177 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
                 Text(
                   widget.section.title,
                   style: const TextStyle(
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
+                    shadows: [
+                      Shadow(
+                        offset: Offset(0, 1),
+                        blurRadius: 3,
+                        color: Colors.black54,
+                      ),
+                    ],
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: _getSectionTypeColor(widget.section.type),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        _getSectionTypeText(widget.section.type),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    if (_isCompleted) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.check_circle,
+                              color: Colors.white,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 4),
+                            const Text(
+                              'Hoàn thành',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    if (_isProgressSaved) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.save,
+                              color: Colors.white,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 4),
+                            const Text(
+                              'Đã lưu',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ],
-            ),
-          ),
-          IconButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Tùy chọn thêm')),
-              );
-            },
-            icon: const Icon(
-              Icons.more_vert,
-              color: Colors.white,
             ),
           ),
         ],
       ),
     );
   }
-  
-  Widget _buildProgressTrackingArea() {
+
+  Widget _buildProgressBar() {
+    final progress = _totalDuration.inSeconds > 0 
+        ? _currentPosition.inSeconds / _totalDuration.inSeconds
+        : 0.0;
+        
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.black,
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.black,
-            _getCategoryColor(widget.lesson.category).withOpacity(0.2),
-          ],
-        ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Section progress
-            Row(
-              children: [
-                Text(
-                  'Phần ${widget.sectionIndex + 1}/${widget.lesson.sections.length}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Container(
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                    child: Row(
-                      children: [
-                        Flexible(
-                          flex: ((widget.sectionIndex + 1) * 100 ~/ widget.lesson.sections.length),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ),
-                        Flexible(
-                          flex: 100 - ((widget.sectionIndex + 1) * 100 ~/ widget.lesson.sections.length),
-                          child: Container(),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+      color: Colors.black87,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Progress bar with better styling
+          Container(
+            height: 6,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(3),
             ),
-            
-            const SizedBox(height: 8),
-            
-            // Current section progress
-            Row(
-              children: [
-                Icon(
-                  widget.section.type.toLowerCase() == 'video'
-                      ? Icons.videocam
-                      : widget.section.type.toLowerCase() == 'audio'
-                          ? Icons.audiotrack
-                          : Icons.article,
-                  color: Colors.white,
-                  size: 16,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.section.title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(2),
-                        child: LinearProgressIndicator(
-                          value: _progress,
-                          backgroundColor: Colors.white.withOpacity(0.2),
-                          valueColor: AlwaysStoppedAnimation<Color>(_getCategoryColor(widget.lesson.category)),
-                          minHeight: 4,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '${(_progress * 100).toInt()}%',
-                  style: TextStyle(
-                    color: _getCategoryColor(widget.lesson.category),
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 4),
-            
-            // Time display for audio/video
-            if (widget.section.type.toLowerCase() == 'audio' || widget.section.type.toLowerCase() == 'video')
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      _formatDuration(_currentPosition),
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
-                    ),
-                    Text(
-                      ' / ${_formatDuration(_totalDuration)}',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: progress.clamp(0.0, 1.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: _getCategoryColor(widget.lesson.category),
+                  borderRadius: BorderRadius.circular(3),
                 ),
               ),
-          ],
-        ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.play_circle_outline,
+                    color: Colors.white70,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    _formatDuration(_currentPosition),
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Text(
+                    _formatDuration(_totalDuration),
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(
+                    Icons.schedule,
+                    color: Colors.white70,
+                    size: 16,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -565,27 +662,26 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
       return _buildVideoPlayer();
     } else if (widget.section.type.toLowerCase() == 'audio') {
       return _buildAudioPlayer();
+    } else if (widget.section.type.toLowerCase() == 'exercise') {
+      return _buildExerciseContent();
     } else {
       return _buildTextContent();
     }
   }
 
   Widget _buildVideoPlayer() {
-    // Use the LessonMediaWidget for video playback
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
         color: Colors.black,
       ),
       child: widget.section.mediaUrl != null && widget.section.mediaUrl!.isNotEmpty
-        ? LessonMediaWidget(
-            key: _mediaWidgetKey,
-            videoUrl: widget.section.mediaUrl,
+        ? UnifiedVideoPlayer(
+            videoUrl: widget.section.mediaUrl!,
             width: double.infinity,
             height: double.infinity,
-            enableAutoPlay: !_isCompleted, // Don't autoplay if already completed
-            showControls: true,
-            onProgressUpdate: _updateProgress,
+            onVideoComplete: _onVideoComplete,
+            onProgressUpdate: _onProgressUpdate,
           )
         : _buildVideoPlaceholder(),
     );
@@ -644,36 +740,64 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Audio visualization or player
-          SizedBox(
-            height: 200,
-            width: 200,
+          // Audio visualization or player - increased size
+          Container(
+            height: MediaQuery.of(context).size.height * 0.4, // 40% of screen height
+            width: MediaQuery.of(context).size.width * 0.9, // 90% of screen width
+            constraints: const BoxConstraints(
+              minHeight: 280,
+              maxHeight: 400,
+              minWidth: 320,
+            ),
             child: widget.section.mediaUrl != null && widget.section.mediaUrl!.isNotEmpty
               ? LessonMediaWidget(
-                  key: _mediaWidgetKey,
                   audioUrl: widget.section.mediaUrl,
-                  width: 200,
-                  height: 200,
-                  enableAutoPlay: !_isCompleted, // Don't autoplay if already completed
+                  width: double.infinity,
+                  height: double.infinity,
+                  enableAutoPlay: true,
                   showControls: true,
-                  onProgressUpdate: _updateProgress,
+                  onProgressUpdate: (progress, position, total) {
+                    _onProgressUpdate(position, total);
+                    // Check if audio completed
+                    if (progress >= 0.95 && !_isCompleted) {
+                      _onVideoComplete();
+                    }
+                  },
                 )
               : _buildAudioPlaceholder(),
           ),
           
-          const SizedBox(height: 20),
+          const SizedBox(height: 30),
           
           // Title and description
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              widget.section.title,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-              textAlign: TextAlign.center,
+            child: Column(
+              children: [
+                Text(
+                  widget.section.title,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                if (widget.section.content.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    widget.section.content,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.white70,
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
             ),
           ),
         ],
@@ -713,292 +837,722 @@ class _LessonPlayerScreenState extends State<LessonPlayerScreen> with TickerProv
     );
   }
 
-  Widget _buildTextContent() {
+  Widget _buildExerciseContent() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(40),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.grey[900]!,
-            Colors.black,
+            Colors.green[50]!,
+            Colors.green[100]!,
           ],
         ),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.article_rounded,
-            size: 80,
-            color: Colors.white.withOpacity(0.6),
-          ),
-          
-          const SizedBox(height: 30),
-          
-          Text(
-            widget.section.title,
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          
-          const SizedBox(height: 20),
-          
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withOpacity(0.2)),
-            ),
-            child: Text(
-              widget.section.content,
-              style: const TextStyle(
-                fontSize: 18,
-                color: Colors.white,
-                height: 1.6,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildControlsArea() {
-    return Container(
-      color: Colors.black,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: SafeArea(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            // Previous button
-            IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.arrow_back_ios, color: Colors.white70),
-              tooltip: 'Quay lại',
-            ),
-            
-            // Play/pause button - only show for text content
-            Container(
-              width: 70,
-              height: 70,
-              decoration: BoxDecoration(
-                color: _getCategoryColor(widget.lesson.category),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: _getCategoryColor(widget.lesson.category).withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with exercise icon
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.green.withOpacity(0.3),
+                    width: 1,
                   ),
-                ],
-              ),
-              child: IconButton(
-                onPressed: _togglePlayPause,
-                icon: Icon(
-                  _isPlaying ? Icons.pause : Icons.play_arrow,
-                  color: Colors.white,
-                  size: 36,
                 ),
-                tooltip: _isPlaying ? 'Tạm dừng' : 'Phát',
-              ),
-            ),
-            
-            // Restart button
-            IconButton(
-              onPressed: _restartSection,
-              icon: const Icon(Icons.replay, color: Colors.white70),
-              tooltip: 'Học lại',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _completeSection() {
-    // Stop media playback
-    if (_mediaWidgetKey.currentState != null) {
-      _mediaWidgetKey.currentState!.pause();
-    }
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          '🎉 Hoàn thành phần học!',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Bạn đã hoàn thành phần "${widget.section.title}"',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.celebration_rounded,
-                    color: Colors.green,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Phần ${widget.sectionIndex + 1}/${widget.lesson.sections.length} hoàn thành',
-                      style: const TextStyle(
-                        fontSize: 12,
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
                         color: Colors.green,
-                        fontWeight: FontWeight.w600,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.quiz_rounded,
+                        color: Colors.white,
+                        size: 24,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.pop(context); // Close dialog
-              Navigator.pop(context, true); // Return to lesson detail with completion = true
-            },
-            icon: const Icon(Icons.check_rounded, color: Colors.white),
-            label: const Text('Xác nhận', style: TextStyle(color: Colors.white)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLoadingOverlay() {
-    return Container(
-      color: Colors.black.withOpacity(0.8),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(30),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                children: [
-                  CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      _getCategoryColor(widget.lesson.category),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.section.title,
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                              height: 1.3,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Bài tập thực hành',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.green,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Đang tải nội dung...',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCompletedOverlay() {
-    return Positioned(
-      bottom: 80,
-      right: 16,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: _getCategoryColor(widget.lesson.category),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.check_circle,
-              color: Colors.white,
-              size: 18,
-            ),
-            const SizedBox(width: 6),
-            const Text(
-              'Đã hoàn thành',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(width: 6),
-            InkWell(
-              onTap: _restartSection,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              
+              const SizedBox(height: 32),
+              
+              // Exercise content
+              if (widget.section.content.isNotEmpty) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Hướng dẫn bài tập:',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        widget.section.content,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          color: Colors.black87,
+                          height: 1.7,
+                          letterSpacing: 0.2,
+                        ),
+                        textAlign: TextAlign.justify,
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+                
+                // Interactive elements placeholder
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.green[200]!, width: 1),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.construction,
+                        size: 48,
+                        color: Colors.green,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Tính năng bài tập tương tác',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tính năng này đang được phát triển. Bài tập tương tác sẽ sớm có mặt!',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.green[700],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      if (!_isCompleted) ...[
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            // Mark as completed for now
+                            setState(() {
+                              _isCompleted = true;
+                              _currentPosition = _totalDuration; // Set to total duration
+                            });
+                            await _saveProgress();
+                            _showCompletionDialog();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: const Icon(Icons.play_arrow),
+                          label: const Text('Bắt đầu học'),
+                        ),
+                      ] else ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: _restartSection,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange[600],
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: const Icon(Icons.replay),
+                              label: const Text('Học lại'),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                if (widget.sectionIndex < widget.lesson.sections.length - 1) {
+                                  _navigateToNextSection();
+                                } else {
+                                  Navigator.pop(context, true);
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: const Icon(Icons.check_circle),
+                              label: const Text('Hoàn thành'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ] else ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(40),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.green[200]!, width: 1),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.quiz_outlined,
+                        size: 48,
+                        color: Colors.green[400],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Nội dung bài tập sẽ được hiển thị ở đây',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.green[600],
+                          fontStyle: FontStyle.italic,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              
+              const SizedBox(height: 32),
+              
+              // Action buttons for text content
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                child: Text(
-                  'Học lại',
-                  style: TextStyle(
-                    color: _getCategoryColor(widget.lesson.category),
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
+                child: Column(
+                  children: [
+                                         if (!_isCompleted) ...[
+                       ElevatedButton.icon(
+                         onPressed: () async {
+                           setState(() {
+                             _isCompleted = true;
+                             _currentPosition = _totalDuration;
+                           });
+                           await _saveProgress();
+                           _showCompletionDialog();
+                         },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _getCategoryColor(widget.lesson.category),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        icon: const Icon(Icons.play_arrow),
+                        label: const Text('Bắt đầu học'),
+                      ),
+                    ] else ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _restartSection,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange[600],
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: const Icon(Icons.replay),
+                              label: const Text('Học lại'),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                if (widget.sectionIndex < widget.lesson.sections.length - 1) {
+                                  _navigateToNextSection();
+                                } else {
+                                  Navigator.pop(context, true);
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _getCategoryColor(widget.lesson.category),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: const Icon(Icons.check_circle),
+                              label: const Text('Hoàn thành'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
               ),
-            ),
-          ],
+              
+              const SizedBox(height: 32),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
-    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
-    return '$twoDigitMinutes:$twoDigitSeconds';
+  Widget _buildTextContent() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.grey[100]!,
+            Colors.white,
+          ],
+        ),
+      ),
+      child: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with icon and category
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: _getCategoryColor(widget.lesson.category).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: _getCategoryColor(widget.lesson.category).withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: _getCategoryColor(widget.lesson.category),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.article_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.section.title,
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: _getCategoryColor(widget.lesson.category),
+                              height: 1.3,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _getSectionTypeText(widget.section.type),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: _getCategoryColor(widget.lesson.category).withOpacity(0.7),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 32),
+              
+              // Content
+              if (widget.section.content.isNotEmpty) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    widget.section.content,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      color: Colors.black87,
+                      height: 1.7,
+                      letterSpacing: 0.2,
+                    ),
+                    textAlign: TextAlign.justify,
+                  ),
+                ),
+              ] else ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(40),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey[200]!, width: 1),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.article_outlined,
+                        size: 48,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Nội dung văn bản sẽ được hiển thị ở đây',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                          fontStyle: FontStyle.italic,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              
+              const SizedBox(height: 32),
+              
+              // Action buttons for text content
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    if (!_isCompleted) ...[
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          setState(() {
+                            _isCompleted = true;
+                            _currentPosition = _totalDuration;
+                          });
+                          await _saveProgress();
+                          _showCompletionDialog();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _getCategoryColor(widget.lesson.category),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        icon: const Icon(Icons.play_arrow),
+                        label: const Text('Bắt đầu học'),
+                      ),
+                    ] else ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _restartSection,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange[600],
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: const Icon(Icons.replay),
+                              label: const Text('Học lại'),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                if (widget.sectionIndex < widget.lesson.sections.length - 1) {
+                                  _navigateToNextSection();
+                                } else {
+                                  Navigator.pop(context, true);
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _getCategoryColor(widget.lesson.category),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: const Icon(Icons.check_circle),
+                              label: const Text('Hoàn thành'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 32),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavigationControls() {
+    return Container(
+      color: Colors.black87,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            // Section indicator and progress
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _getCategoryColor(widget.lesson.category).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: _getCategoryColor(widget.lesson.category),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.play_circle_outline,
+                        color: _getCategoryColor(widget.lesson.category),
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${widget.sectionIndex + 1}/${widget.lesson.sections.length}',
+                        style: TextStyle(
+                          color: _getCategoryColor(widget.lesson.category),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (_isProgressSaved) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.blue,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.save,
+                      color: Colors.white,
+                      size: 12,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Navigation buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Previous button
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: widget.sectionIndex > 0 ? _navigateToPreviousSection : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey[800],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.skip_previous, size: 20),
+                    label: const Text('Trước'),
+                  ),
+                ),
+                
+                const SizedBox(width: 12),
+                
+                // Restart button (only show when completed)
+                if (_isCompleted)
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _restartSection,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange[600],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.replay, size: 20),
+                      label: const Text('Học lại'),
+                    ),
+                  ),
+                
+                if (_isCompleted) const SizedBox(width: 12),
+                
+                // Next/Complete button
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _isCompleted 
+                        ? (widget.sectionIndex < widget.lesson.sections.length - 1 
+                            ? _navigateToNextSection 
+                            : () => Navigator.pop(context, true))
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _isCompleted 
+                          ? _getCategoryColor(widget.lesson.category) 
+                          : Colors.grey[800],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: Icon(
+                      widget.sectionIndex < widget.lesson.sections.length - 1 
+                          ? Icons.skip_next 
+                          : Icons.check_circle,
+                      size: 20,
+                    ),
+                    label: Text(
+                      widget.sectionIndex < widget.lesson.sections.length - 1 
+                          ? 'Tiếp' 
+                          : 'Hoàn thành'
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

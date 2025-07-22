@@ -64,14 +64,14 @@ class CloudinaryService {
       final uri = Uri.parse('https://api.cloudinary.com/v1_1/$_cloudName/image/upload');
       final request = http.MultipartRequest('POST', uri);
       
-      // Generate public ID
-      final publicId = customPublicId ?? 
-          '${folder.folderName}_${DateTime.now().millisecondsSinceEpoch}';
+      // Generate public ID - include folder in public_id to avoid duplication
+      final publicId = customPublicId != null 
+          ? '${folder.folderName}/$customPublicId'
+          : '${folder.folderName}_${DateTime.now().millisecondsSinceEpoch}';
       
       // Add fields - removed transformation parameters for unsigned upload
       request.fields.addAll({
         'upload_preset': _uploadPreset,
-        'folder': folder.folderName,
         'public_id': publicId,
         'resource_type': 'image',
       });
@@ -148,12 +148,12 @@ class CloudinaryService {
       final uri = Uri.parse('https://api.cloudinary.com/v1_1/$_cloudName/video/upload');
       final request = http.MultipartRequest('POST', uri);
       
-      final publicId = customPublicId ?? 
-          '${folder.folderName}_${DateTime.now().millisecondsSinceEpoch}';
+      final publicId = customPublicId != null 
+          ? '${folder.folderName}/$customPublicId'
+          : '${folder.folderName}_${DateTime.now().millisecondsSinceEpoch}';
       
       request.fields.addAll({
         'upload_preset': _uploadPreset,
-        'folder': folder.folderName,
         'public_id': publicId,
         'resource_type': 'video',
       });
@@ -229,12 +229,12 @@ class CloudinaryService {
       final uri = Uri.parse('https://api.cloudinary.com/v1_1/$_cloudName/video/upload');
       final request = http.MultipartRequest('POST', uri);
       
-      final publicId = customPublicId ?? 
-          '${folder.folderName}_${DateTime.now().millisecondsSinceEpoch}';
+      final publicId = customPublicId != null 
+          ? '${folder.folderName}/$customPublicId'
+          : '${folder.folderName}_${DateTime.now().millisecondsSinceEpoch}';
       
       request.fields.addAll({
         'upload_preset': _uploadPreset,
-        'folder': folder.folderName,
         'public_id': publicId,
         'resource_type': 'video', // Audio files use video resource type in Cloudinary
       });
@@ -299,6 +299,10 @@ class CloudinaryService {
     String resourceType = 'image',
   }) async {
     try {
+      if (kDebugMode) {
+        print('Attempting to delete Cloudinary file: $publicId (type: $resourceType)');
+      }
+
       final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
       final signature = _generateSignature({
         'public_id': publicId,
@@ -317,12 +321,25 @@ class CloudinaryService {
         },
       );
 
+      if (kDebugMode) {
+        print('Delete response status: ${response.statusCode}');
+        print('Delete response body: ${response.body}');
+      }
+
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        return responseData['result'] == 'ok';
+        final success = responseData['result'] == 'ok';
+        if (kDebugMode) {
+          print('Delete result: $success');
+        }
+        return success;
+      } else {
+        if (kDebugMode) {
+          print('Delete failed with status: ${response.statusCode}');
+          print('Response body: ${response.body}');
+        }
+        return false;
       }
-      
-      return false;
     } catch (e) {
       if (kDebugMode) print('Cloudinary delete error: $e');
       return false;

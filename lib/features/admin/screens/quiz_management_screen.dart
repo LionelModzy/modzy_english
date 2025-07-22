@@ -18,11 +18,27 @@ class _QuizManagementScreenState extends State<QuizManagementScreen> with Single
   List<QuizModel> _quizzes = [];
   bool _isLoading = true;
   String _searchQuery = '';
+  
+  // Filter variables for statistics tab
+  String _selectedCategory = 'Tất cả';
+  String _selectedDifficulty = 'Tất cả';
+  DateTime? _startDate;
+  DateTime? _endDate;
+  
+  // Filter variables for quiz tabs
+  String _quizSelectedCategory = 'Tất cả';
+  String _quizSelectedDifficulty = 'Tất cả';
+  DateTime? _quizStartDate;
+  DateTime? _quizEndDate;
+  bool _showQuizFilters = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      setState(() {}); // Rebuild to show/hide search section
+    });
     _loadQuizzes();
   }
 
@@ -54,23 +70,97 @@ class _QuizManagementScreenState extends State<QuizManagementScreen> with Single
   }
 
   List<QuizModel> get _activeQuizzes {
-    final activeQuizzes = _quizzes.where((quiz) => quiz.isActive).toList();
-    if (_searchQuery.isEmpty) return activeQuizzes;
-    return activeQuizzes.where((quiz) {
-      return quiz.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-             quiz.category.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-             quiz.description.toLowerCase().contains(_searchQuery.toLowerCase());
-    }).toList();
+    List<QuizModel> activeQuizzes = _quizzes.where((quiz) => quiz.isActive).toList();
+    
+    // Apply filters
+    activeQuizzes = _applyQuizFilters(activeQuizzes);
+    
+    // Apply search
+    if (_searchQuery.isNotEmpty) {
+      activeQuizzes = activeQuizzes.where((quiz) {
+        return quiz.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+               quiz.category.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+               quiz.description.toLowerCase().contains(_searchQuery.toLowerCase());
+      }).toList();
+    }
+    
+    return activeQuizzes;
   }
   
   List<QuizModel> get _inactiveQuizzes {
-    final inactiveQuizzes = _quizzes.where((quiz) => !quiz.isActive).toList();
-    if (_searchQuery.isEmpty) return inactiveQuizzes;
-    return inactiveQuizzes.where((quiz) {
-      return quiz.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-             quiz.category.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-             quiz.description.toLowerCase().contains(_searchQuery.toLowerCase());
-    }).toList();
+    List<QuizModel> inactiveQuizzes = _quizzes.where((quiz) => !quiz.isActive).toList();
+    
+    // Apply filters
+    inactiveQuizzes = _applyQuizFilters(inactiveQuizzes);
+    
+    // Apply search
+    if (_searchQuery.isNotEmpty) {
+      inactiveQuizzes = inactiveQuizzes.where((quiz) {
+        return quiz.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+               quiz.category.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+               quiz.description.toLowerCase().contains(_searchQuery.toLowerCase());
+      }).toList();
+    }
+    
+    return inactiveQuizzes;
+  }
+  
+  List<QuizModel> _applyQuizFilters(List<QuizModel> quizzes) {
+    List<QuizModel> filtered = quizzes;
+    
+    // Filter by category
+    if (_quizSelectedCategory != 'Tất cả') {
+      filtered = filtered.where((quiz) => quiz.category == _quizSelectedCategory).toList();
+    }
+    
+    // Filter by difficulty
+    if (_quizSelectedDifficulty != 'Tất cả') {
+      final difficultyLevel = int.tryParse(_quizSelectedDifficulty) ?? 1;
+      filtered = filtered.where((quiz) => quiz.difficultyLevel == difficultyLevel).toList();
+    }
+    
+    // Filter by date range
+    if (_quizStartDate != null) {
+      filtered = filtered.where((quiz) => quiz.createdAt.isAfter(_quizStartDate!)).toList();
+    }
+    if (_quizEndDate != null) {
+      filtered = filtered.where((quiz) => quiz.createdAt.isBefore(_quizEndDate!.add(const Duration(days: 1)))).toList();
+    }
+    
+    return filtered;
+  }
+
+  // Filtered quizzes for statistics tab
+  List<QuizModel> get _filteredQuizzes {
+    List<QuizModel> filtered = _quizzes;
+    
+    // Filter by category
+    if (_selectedCategory != 'Tất cả') {
+      filtered = filtered.where((quiz) => quiz.category == _selectedCategory).toList();
+    }
+    
+    // Filter by difficulty
+    if (_selectedDifficulty != 'Tất cả') {
+      final difficultyLevel = int.tryParse(_selectedDifficulty) ?? 1;
+      filtered = filtered.where((quiz) => quiz.difficultyLevel == difficultyLevel).toList();
+    }
+    
+    // Filter by date range
+    if (_startDate != null) {
+      filtered = filtered.where((quiz) => quiz.createdAt.isAfter(_startDate!)).toList();
+    }
+    if (_endDate != null) {
+      filtered = filtered.where((quiz) => quiz.createdAt.isBefore(_endDate!.add(const Duration(days: 1)))).toList();
+    }
+    
+    return filtered;
+  }
+
+  // Get unique categories for filter
+  List<String> get _categories {
+    final categories = _quizzes.map((q) => q.category).toSet().toList();
+    categories.sort();
+    return ['Tất cả', ...categories];
   }
 
   // Temporary helper method for testing - makes current user admin
@@ -99,6 +189,24 @@ class _QuizManagementScreenState extends State<QuizManagementScreen> with Single
         ),
       );
     }
+  }
+
+  void _resetFilters() {
+    setState(() {
+      _selectedCategory = 'Tất cả';
+      _selectedDifficulty = 'Tất cả';
+      _startDate = null;
+      _endDate = null;
+    });
+  }
+  
+  void _resetQuizFilters() {
+    setState(() {
+      _quizSelectedCategory = 'Tất cả';
+      _quizSelectedDifficulty = 'Tất cả';
+      _quizStartDate = null;
+      _quizEndDate = null;
+    });
   }
 
   @override
@@ -130,6 +238,10 @@ class _QuizManagementScreenState extends State<QuizManagementScreen> with Single
               icon: Icon(Icons.pause_circle),
               text: 'Quiz Tạm dừng',
             ),
+            Tab(
+              icon: Icon(Icons.analytics),
+              text: 'Thống kê',
+            ),
           ],
         ),
         actions: [
@@ -147,76 +259,219 @@ class _QuizManagementScreenState extends State<QuizManagementScreen> with Single
       ),
       body: Column(
         children: [
-          // Search and Add Section
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: AppColors.surface,
-            child: Column(
-              children: [
-                // Search bar
-                TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Tìm kiếm quiz...',
-                    prefixIcon: const Icon(Icons.search_rounded),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
+          // Search and Add Section (only for quiz tabs)
+          if (_tabController.index < 2)
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: AppColors.surface,
+              child: Column(
+                children: [
+                  // Search and Filter Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          decoration: InputDecoration(
+                            hintText: 'Tìm kiếm quiz...',
+                            prefixIcon: const Icon(Icons.search_rounded),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                          ),
+                          onChanged: (value) => setState(() => _searchQuery = value),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      IconButton(
+                        onPressed: () => setState(() => _showQuizFilters = !_showQuizFilters),
+                        icon: Icon(
+                          _showQuizFilters ? Icons.filter_list_off : Icons.filter_list,
+                          color: _showQuizFilters ? AppColors.primary : Colors.grey,
+                        ),
+                        tooltip: 'Bộ lọc',
+                      ),
+                    ],
+                  ),
+                  
+                  // Filter Section
+                  if (_showQuizFilters) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.filter_list, color: AppColors.primary, size: 20),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Bộ lọc Quiz',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const Spacer(),
+                              TextButton.icon(
+                                onPressed: _resetQuizFilters,
+                                icon: const Icon(Icons.refresh, size: 16),
+                                label: const Text('Đặt lại'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          
+                          // Filter Row 1
+                          Row(
+                            children: [
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  value: _quizSelectedCategory,
+                                  decoration: InputDecoration(
+                                    labelText: 'Danh mục',
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  ),
+                                  items: _categories.map((cat) => DropdownMenuItem(
+                                    value: cat,
+                                    child: Text(cat, style: const TextStyle(fontSize: 14)),
+                                  )).toList(),
+                                  onChanged: (value) => setState(() => _quizSelectedCategory = value ?? 'Tất cả'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  value: _quizSelectedDifficulty,
+                                  decoration: InputDecoration(
+                                    labelText: 'Độ khó',
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  ),
+                                  items: ['Tất cả', '1', '2', '3', '4', '5'].map((diff) => DropdownMenuItem(
+                                    value: diff,
+                                    child: Text(diff == 'Tất cả' ? diff : 'Cấp $diff', style: const TextStyle(fontSize: 14)),
+                                  )).toList(),
+                                  onChanged: (value) => setState(() => _quizSelectedDifficulty = value ?? 'Tất cả'),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          
+                          // Filter Row 2 - Date Range
+                          Row(
+                            children: [
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () async {
+                                    final date = await showDatePicker(
+                                      context: context,
+                                      initialDate: _quizStartDate ?? DateTime.now(),
+                                      firstDate: DateTime(2020),
+                                      lastDate: DateTime.now(),
+                                    );
+                                    if (date != null) {
+                                      setState(() => _quizStartDate = date);
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: Colors.grey.shade400),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.calendar_today, size: 16, color: AppColors.primary),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          _quizStartDate != null 
+                                              ? '${_quizStartDate!.day}/${_quizStartDate!.month}/${_quizStartDate!.year}'
+                                              : 'Từ ngày',
+                                          style: TextStyle(
+                                            color: _quizStartDate != null ? AppColors.textPrimary : Colors.grey,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () async {
+                                    final date = await showDatePicker(
+                                      context: context,
+                                      initialDate: _quizEndDate ?? DateTime.now(),
+                                      firstDate: DateTime(2020),
+                                      lastDate: DateTime.now(),
+                                    );
+                                    if (date != null) {
+                                      setState(() => _quizEndDate = date);
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: Colors.grey.shade400),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.calendar_today, size: 16, color: AppColors.primary),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          _quizEndDate != null 
+                                              ? '${_quizEndDate!.day}/${_quizEndDate!.month}/${_quizEndDate!.year}'
+                                              : 'Đến ngày',
+                                          style: TextStyle(
+                                            color: _quizEndDate != null ? AppColors.textPrimary : Colors.grey,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                    filled: true,
-                    fillColor: Colors.white,
+                  ],
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Add Quiz Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: CustomButton(
+                      text: 'Tạo Quiz Mới',
+                      onPressed: () => _showCreateQuizDialog(),
+                      color: AppColors.success,
+                      icon: Icons.add_rounded,
+                    ),
                   ),
-                  onChanged: (value) => setState(() => _searchQuery = value),
-                ),
-                const SizedBox(height: 16),
-                
-                // Add Quiz Button
-                SizedBox(
-                  width: double.infinity,
-                  child: CustomButton(
-                    text: 'Tạo Quiz Mới',
-                    onPressed: () => _showCreateQuizDialog(),
-                    color: AppColors.success,
-                    icon: Icons.add_rounded,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          
-          // Statistics
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(
-                    title: 'Tổng số Quiz',
-                    value: '${_quizzes.length}',
-                    icon: Icons.quiz_rounded,
-                    color: AppColors.primary,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildStatCard(
-                    title: 'Quiz Hoạt động',
-                    value: '${_quizzes.where((q) => q.isActive).length}',
-                    icon: Icons.check_circle_rounded,
-                    color: AppColors.success,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildStatCard(
-                    title: 'Danh mục',
-                    value: '${_quizzes.map((q) => q.category).toSet().length}',
-                    icon: Icons.category_rounded,
-                    color: AppColors.accent,
-                  ),
-                ),
-              ],
-            ),
-          ),
           
           // Quiz Tabs
           Expanded(
@@ -227,6 +482,8 @@ class _QuizManagementScreenState extends State<QuizManagementScreen> with Single
                 _buildQuizList(_activeQuizzes, true),
                 // Inactive Quizzes Tab  
                 _buildQuizList(_inactiveQuizzes, false),
+                // Statistics Tab
+                _buildStatisticsTab(),
               ],
             ),
           ),
@@ -242,7 +499,7 @@ class _QuizManagementScreenState extends State<QuizManagementScreen> with Single
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -256,29 +513,458 @@ class _QuizManagementScreenState extends State<QuizManagementScreen> with Single
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
+          Icon(icon, color: color, size: 20),
+          const SizedBox(height: 6),
           Text(
             value,
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
               color: color,
             ),
+            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
             title,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               color: AppColors.textSecondary,
             ),
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildStatisticsTab() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final filteredQuizzes = _filteredQuizzes;
+    final totalQuizzes = filteredQuizzes.length;
+    final activeQuizzes = filteredQuizzes.where((q) => q.isActive).length;
+    final categories = filteredQuizzes.map((q) => q.category).toSet().length;
+    final totalQuestions = filteredQuizzes.fold(0, (sum, q) => sum + q.questions.length);
+    final totalPoints = filteredQuizzes.fold(0, (sum, q) => sum + q.questions.fold(0, (qSum, question) => qSum + question.points));
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Filter Section
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.filter_list, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Bộ lọc',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: _resetFilters,
+                      icon: const Icon(Icons.refresh, size: 16),
+                      label: const Text('Đặt lại'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
+                // Filter Row 1
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: _selectedCategory,
+                        decoration: InputDecoration(
+                          labelText: 'Danh mục',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                        items: _categories.map((cat) => DropdownMenuItem(
+                          value: cat,
+                          child: Text(cat, style: const TextStyle(fontSize: 14)),
+                        )).toList(),
+                        onChanged: (value) => setState(() => _selectedCategory = value ?? 'Tất cả'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: _selectedDifficulty,
+                        decoration: InputDecoration(
+                          labelText: 'Độ khó',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                        items: ['Tất cả', '1', '2', '3', '4', '5'].map((diff) => DropdownMenuItem(
+                          value: diff,
+                          child: Text(diff == 'Tất cả' ? diff : 'Cấp $diff', style: const TextStyle(fontSize: 14)),
+                        )).toList(),
+                        onChanged: (value) => setState(() => _selectedDifficulty = value ?? 'Tất cả'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                
+                // Filter Row 2 - Date Range
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: _startDate ?? DateTime.now(),
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime.now(),
+                          );
+                          if (date != null) {
+                            setState(() => _startDate = date);
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade400),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.calendar_today, size: 16, color: AppColors.primary),
+                              const SizedBox(width: 8),
+                              Text(
+                                _startDate != null 
+                                    ? '${_startDate!.day}/${_startDate!.month}/${_startDate!.year}'
+                                    : 'Từ ngày',
+                                style: TextStyle(
+                                  color: _startDate != null ? AppColors.textPrimary : Colors.grey,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: _endDate ?? DateTime.now(),
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime.now(),
+                          );
+                          if (date != null) {
+                            setState(() => _endDate = date);
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade400),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.calendar_today, size: 16, color: AppColors.primary),
+                              const SizedBox(width: 8),
+                              Text(
+                                _endDate != null 
+                                    ? '${_endDate!.day}/${_endDate!.month}/${_endDate!.year}'
+                                    : 'Đến ngày',
+                                style: TextStyle(
+                                  color: _endDate != null ? AppColors.textPrimary : Colors.grey,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Statistics Cards
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              SizedBox(
+                width: (MediaQuery.of(context).size.width - 64) / 3,
+                child: _buildStatCard(
+                  title: 'Tổng Quiz',
+                  value: '$totalQuizzes',
+                  icon: Icons.quiz_rounded,
+                  color: AppColors.primary,
+                ),
+              ),
+              SizedBox(
+                width: (MediaQuery.of(context).size.width - 64) / 3,
+                child: _buildStatCard(
+                  title: 'Hoạt động',
+                  value: '$activeQuizzes',
+                  icon: Icons.check_circle_rounded,
+                  color: AppColors.success,
+                ),
+              ),
+              SizedBox(
+                width: (MediaQuery.of(context).size.width - 64) / 3,
+                child: _buildStatCard(
+                  title: 'Danh mục',
+                  value: '$categories',
+                  icon: Icons.category_rounded,
+                  color: AppColors.accent,
+                ),
+              ),
+              SizedBox(
+                width: (MediaQuery.of(context).size.width - 64) / 3,
+                child: _buildStatCard(
+                  title: 'Câu hỏi',
+                  value: '$totalQuestions',
+                  icon: Icons.question_answer_rounded,
+                  color: Colors.blue,
+                ),
+              ),
+              SizedBox(
+                width: (MediaQuery.of(context).size.width - 64) / 3,
+                child: _buildStatCard(
+                  title: 'Tổng điểm',
+                  value: '$totalPoints',
+                  icon: Icons.stars_rounded,
+                  color: Colors.orange,
+                ),
+              ),
+              SizedBox(
+                width: (MediaQuery.of(context).size.width - 64) / 3,
+                child: _buildStatCard(
+                  title: 'Tỷ lệ',
+                  value: totalQuizzes > 0 ? '${((activeQuizzes / totalQuizzes) * 100).toStringAsFixed(1)}%' : '0%',
+                  icon: Icons.trending_up_rounded,
+                  color: Colors.green,
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Category Breakdown
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Thống kê theo danh mục',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ..._buildCategoryStats(),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Difficulty Breakdown
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Thống kê theo độ khó',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ..._buildDifficultyStats(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildCategoryStats() {
+    final categoryMap = <String, int>{};
+    for (final quiz in _filteredQuizzes) {
+      categoryMap[quiz.category] = (categoryMap[quiz.category] ?? 0) + 1;
+    }
+    
+    final sortedCategories = categoryMap.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    
+    return sortedCategories.map((entry) {
+      final percentage = _filteredQuizzes.isNotEmpty 
+          ? (entry.value / _filteredQuizzes.length * 100).toStringAsFixed(1)
+          : '0.0';
+      
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: _getCategoryColor(entry.key),
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                entry.key,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            Text(
+              '${entry.value} (${percentage}%)',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }).toList();
+  }
+
+  List<Widget> _buildDifficultyStats() {
+    final difficultyMap = <int, int>{};
+    for (final quiz in _filteredQuizzes) {
+      difficultyMap[quiz.difficultyLevel] = (difficultyMap[quiz.difficultyLevel] ?? 0) + 1;
+    }
+    
+    return List.generate(5, (index) {
+      final level = index + 1;
+      final count = difficultyMap[level] ?? 0;
+      final percentage = _filteredQuizzes.isNotEmpty 
+          ? (count / _filteredQuizzes.length * 100).toStringAsFixed(1)
+          : '0.0';
+      
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: _getDifficultyColor(level),
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Cấp $level',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            Text(
+              '$count (${percentage}%)',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Color _getDifficultyColor(int level) {
+    switch (level) {
+      case 1: return Colors.green;
+      case 2: return Colors.blue;
+      case 3: return Colors.orange;
+      case 4: return Colors.red;
+      case 5: return Colors.purple;
+      default: return Colors.grey;
+    }
   }
 
   Widget _buildQuizList(List<QuizModel> quizzes, bool isActiveTab) {
@@ -300,18 +986,26 @@ class _QuizManagementScreenState extends State<QuizManagementScreen> with Single
   }
 
   Widget _buildEmptyState([bool isActiveTab = true]) {
+    final hasFilters = _quizSelectedCategory != 'Tất cả' || 
+                      _quizSelectedDifficulty != 'Tất cả' || 
+                      _quizStartDate != null || 
+                      _quizEndDate != null ||
+                      _searchQuery.isNotEmpty;
+    
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.quiz_outlined,
+            hasFilters ? Icons.filter_list_off : Icons.quiz_outlined,
             size: 80,
             color: AppColors.textSecondary.withOpacity(0.5),
           ),
           const SizedBox(height: 24),
           Text(
-            isActiveTab ? 'Không tìm thấy quiz hoạt động' : 'Không có quiz bị tạm dừng',
+            hasFilters 
+                ? 'Không tìm thấy quiz phù hợp'
+                : (isActiveTab ? 'Không tìm thấy quiz hoạt động' : 'Không có quiz bị tạm dừng'),
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -320,16 +1014,30 @@ class _QuizManagementScreenState extends State<QuizManagementScreen> with Single
           ),
           const SizedBox(height: 8),
           Text(
-            isActiveTab 
-                ? 'Tạo quiz đầu tiên để bắt đầu'
-                : 'Các quiz bị tạm dừng sẽ hiển thị ở đây',
+            hasFilters
+                ? 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm'
+                : (isActiveTab 
+                    ? 'Tạo quiz đầu tiên để bắt đầu'
+                    : 'Các quiz bị tạm dừng sẽ hiển thị ở đây'),
             style: TextStyle(
               fontSize: 14,
               color: AppColors.textSecondary,
             ),
           ),
           const SizedBox(height: 24),
-          if (isActiveTab)
+          if (hasFilters)
+            CustomButton(
+              text: 'Đặt lại bộ lọc',
+              onPressed: () {
+                setState(() {
+                  _resetQuizFilters();
+                  _searchQuery = '';
+                });
+              },
+              color: AppColors.warning,
+              icon: Icons.refresh_rounded,
+            )
+          else if (isActiveTab)
             CustomButton(
               text: 'Tạo Quiz',
               onPressed: () => _showCreateQuizDialog(),
@@ -438,11 +1146,12 @@ class _QuizManagementScreenState extends State<QuizManagementScreen> with Single
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   quiz.description,
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     color: AppColors.textSecondary,
                   ),
                   maxLines: 2,
@@ -526,7 +1235,7 @@ class _QuizManagementScreenState extends State<QuizManagementScreen> with Single
       children: [
         Icon(icon, size: 16, color: color),
         const SizedBox(width: 4),
-        Flexible(
+        Expanded(
           child: Text(
             text,
             style: TextStyle(
@@ -534,6 +1243,7 @@ class _QuizManagementScreenState extends State<QuizManagementScreen> with Single
               color: color,
               fontWeight: FontWeight.w500,
             ),
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
         ),

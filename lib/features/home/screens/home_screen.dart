@@ -12,6 +12,7 @@ import '../../lessons/screens/lessons_screen.dart';
 import '../../quiz/screens/quiz_list_screen.dart';
 import '../../vocabulary/screens/vocabulary_screen.dart';
 import '../../videos/screens/video_screen.dart';
+import '../../../core/services/user_progress_utils.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -37,6 +38,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         setState(() {
           currentUser = user;
           isLoading = false;
+        });
+      }
+      // Sync progress after loading user
+      await UserProgressUtils.syncUserProgressWithStats();
+      // Reload user data to get updated progress
+      final updatedUser = await AuthRepository.getCurrentUserData();
+      if (mounted) {
+        setState(() {
+          currentUser = updatedUser;
         });
       }
     } catch (_) {
@@ -93,6 +103,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   const SizedBox(height: 20),
 
                   _ProgressCard(user: currentUser, isDark: isDark),
+                  const SizedBox(height: 20),
+
+                  // New Features Section
+                  _FeatureShortcutSection(),
                   const SizedBox(height: 20),
 
                   if (currentUser?.isAdmin == true) ...[
@@ -467,6 +481,131 @@ class _ActionCard extends StatelessWidget {
               subtitle,
               style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.7)),
               textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FeatureShortcutSection extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final features = [
+      {
+        'icon': Icons.leaderboard,
+        'title': 'Leaderboard',
+        'subtitle': 'Bảng xếp hạng học viên',
+      },
+      {
+        'icon': Icons.smart_toy,
+        'title': 'AI Assistant',
+        'subtitle': 'Trợ lý AI hỗ trợ học',
+      },
+      {
+        'icon': Icons.group,
+        'title': 'Group Study',
+        'subtitle': 'Học nhóm, cùng tiến bộ',
+      },
+      {
+        'icon': Icons.sports_kabaddi,
+        'title': 'Challenge',
+        'subtitle': 'Thách đấu bạn bè',
+      },
+      {
+        'icon': Icons.videogame_asset,
+        'title': 'Mini-game',
+        'subtitle': 'Chơi game học tiếng Anh',
+      },
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Khám phá tính năng mới',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1A237E),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 110,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: features.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 16),
+            itemBuilder: (context, i) {
+              final f = features[i];
+              return _FeatureCard(
+                icon: f['icon'] as IconData,
+                title: f['title'] as String,
+                subtitle: f['subtitle'] as String,
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('${f['title']} - Coming soon!')),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FeatureCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  const _FeatureCard({required this.icon, required this.title, required this.subtitle, required this.onTap});
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    // Responsive width: nhỏ hơn trên mobile, lớn hơn trên tablet
+    final cardWidth = screenWidth < 400 ? 120.0 : (screenWidth < 600 ? 150.0 : 180.0);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        width: cardWidth,
+        constraints: const BoxConstraints(minHeight: 90, maxHeight: 130),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), // giảm padding
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.blue.withOpacity(0.12)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.blue.withOpacity(0.07),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min, // fix overflow
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: Colors.blue[700], size: 28),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1A237E)),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: const TextStyle(fontSize: 11, color: Colors.black54),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
