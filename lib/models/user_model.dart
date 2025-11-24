@@ -14,6 +14,7 @@ class UserModel {
   final int totalVocabularyLearned;
   final int currentLevel;
   final double progressPercentage;
+  final List<String> friends;
 
   UserModel({
     required this.uid,
@@ -29,6 +30,7 @@ class UserModel {
     required this.totalVocabularyLearned,
     required this.currentLevel,
     required this.progressPercentage,
+    required this.friends,
   });
 
   // Factory constructor to create UserModel from Firestore document
@@ -51,6 +53,7 @@ class UserModel {
       totalVocabularyLearned: data['totalVocabularyLearned'] ?? 0,
       currentLevel: data['currentLevel'] ?? 1,
       progressPercentage: (data['progressPercentage'] ?? 0.0).toDouble(),
+      friends: List<String>.from(data['friends'] ?? <String>[]),
     );
   }
 
@@ -76,6 +79,7 @@ class UserModel {
       totalVocabularyLearned: map['totalVocabularyLearned'] ?? 0,
       currentLevel: map['currentLevel'] ?? 1,
       progressPercentage: (map['progressPercentage'] ?? 0.0).toDouble(),
+      friends: List<String>.from(map['friends'] ?? <String>[]),
     );
   }
 
@@ -95,6 +99,7 @@ class UserModel {
       'totalVocabularyLearned': totalVocabularyLearned,
       'currentLevel': currentLevel,
       'progressPercentage': progressPercentage,
+      'friends': friends,
     };
   }
 
@@ -113,6 +118,7 @@ class UserModel {
     int? totalVocabularyLearned,
     int? currentLevel,
     double? progressPercentage,
+    List<String>? friends,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -128,6 +134,7 @@ class UserModel {
       totalVocabularyLearned: totalVocabularyLearned ?? this.totalVocabularyLearned,
       currentLevel: currentLevel ?? this.currentLevel,
       progressPercentage: progressPercentage ?? this.progressPercentage,
+      friends: friends ?? this.friends,
     );
   }
 
@@ -170,7 +177,7 @@ class UserModel {
 
   @override
   String toString() {
-    return 'UserModel(uid: $uid, email: $email, displayName: $displayName, role: $role, currentLevel: $currentLevel)';
+    return 'UserModel(uid: $uid, email: $email, displayName: $displayName, role: $role, currentLevel: $currentLevel, friends: ${friends.length})';
   }
 
   @override

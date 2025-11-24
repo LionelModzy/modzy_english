@@ -1,149 +1,214 @@
 {
-    "indexes": [
-      {
-        "collectionGroup": "vocabulary",
-        "queryScope": "COLLECTION_GROUP",
-        "fields": [
-          { "fieldPath": "category", "order": "ASCENDING" },
-          { "fieldPath": "createdAt", "order": "DESCENDING" }
-        ]
-      },
-      {
-        "collectionGroup": "favorites",
-        "queryScope": "COLLECTION_GROUP",
-        "fields": [
-          { "fieldPath": "type", "order": "ASCENDING" },
-          { "fieldPath": "addedAt", "order": "DESCENDING" }
-        ]
-      },
-      {
-        "collectionGroup": "vocabulary_progress",
-        "queryScope": "COLLECTION_GROUP",
-        "fields": [
-          { "fieldPath": "userId", "order": "ASCENDING" },
-          { "fieldPath": "completedAt", "order": "DESCENDING" }
-        ]
-      },
-      {
-        "collectionGroup": "bookmarks",
-        "queryScope": "COLLECTION_GROUP",
-        "fields": [
-          { "fieldPath": "type", "order": "ASCENDING" },
-          { "fieldPath": "bookmarkedAt", "order": "DESCENDING" }
-        ]
-      },
-      {
-        "collectionGroup": "bookmarks",
-        "queryScope": "COLLECTION_GROUP",
-        "fields": [
-          { "fieldPath": "type", "order": "ASCENDING" },
-          { "fieldPath": "needsReview", "order": "ASCENDING" },
-          { "fieldPath": "bookmarkedAt", "order": "DESCENDING" }
-        ]
-      },
-      {
-        "collectionGroup": "lesson_notes",
-        "queryScope": "COLLECTION",
-        "fields": [
-          {
-            "fieldPath": "lessonId",
-            "order": "ASCENDING"
-          },
-          {
-            "fieldPath": "userId", 
-            "order": "ASCENDING"
-          },
-          {
-            "fieldPath": "createdAt",
-            "order": "DESCENDING"
-          },
-          {
-            "fieldPath": "__name__",
-            "order": "DESCENDING"
-          }
-        ]
-      },
-      {
-        "collectionGroup": "quizzes",
-        "queryScope": "COLLECTION", 
-        "fields": [
-          {
-            "fieldPath": "isActive",
-            "order": "ASCENDING"
-          },
-          {
-            "fieldPath": "lessonId",
-            "order": "ASCENDING"
-          },
-          {
-            "fieldPath": "createdAt",
-            "order": "ASCENDING"
-          },
-          {
-            "fieldPath": "__name__",
-            "order": "ASCENDING"
-          }
-        ]
-      },
-      {
-        "collectionGroup": "quizzes",
-        "queryScope": "COLLECTION",
-        "fields": [
-          {
-            "fieldPath": "isActive",
-            "order": "ASCENDING"
-          },
-          {
-            "fieldPath": "createdAt",
-            "order": "DESCENDING"
-          },
-          {
-            "fieldPath": "__name__",
-            "order": "DESCENDING"
-          }
-        ]
-      },
-      {
-        "collectionGroup": "quiz_results",
-        "queryScope": "COLLECTION",
-        "fields": [
-          {
-            "fieldPath": "userId",
-            "order": "ASCENDING"
-          },
-          {
-            "fieldPath": "completedAt",
-            "order": "DESCENDING"
-          },
-          {
-            "fieldPath": "__name__",
-            "order": "DESCENDING"
-          }
-        ]
-      },
-      {
-        "collectionGroup": "quiz_results",
-        "queryScope": "COLLECTION",
-        "fields": [
-          {
-            "fieldPath": "quizId",
-            "order": "ASCENDING"
-          },
-          {
-            "fieldPath": "userId",
-            "order": "ASCENDING"
-          },
-          {
-            "fieldPath": "score",
-            "order": "DESCENDING"
-          },
-          {
-            "fieldPath": "__name__",
-            "order": "DESCENDING"
-          }
-        ]
-      }
-    ],
-    "fieldOverrides": []
-  }
-  
+  "indexes": [
+    {
+      "collectionGroup": "vocabulary",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "category", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "favorites",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "type", "order": "ASCENDING" },
+        { "fieldPath": "addedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "vocabulary_progress",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "completedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "bookmarks",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "type", "order": "ASCENDING" },
+        { "fieldPath": "bookmarkedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "bookmarks",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "type", "order": "ASCENDING" },
+        { "fieldPath": "needsReview", "order": "ASCENDING" },
+        { "fieldPath": "bookmarkedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "lesson_notes",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "lessonId", "order": "ASCENDING" },
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "quizzes",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "lessonId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "quizzes",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "quiz_results",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "completedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "quiz_results",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "quizId", "order": "ASCENDING" },
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "score", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "general_progress",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "activityType", "order": "ASCENDING" },
+        { "fieldPath": "completedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mini_games",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mini_games",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "gameType", "order": "ASCENDING" },
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mini_games",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "difficultyLevel", "order": "ASCENDING" },
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "game_scores",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "gameId", "order": "ASCENDING" },
+        { "fieldPath": "playedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "game_scores",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "score", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "game_scores",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "gameId", "order": "ASCENDING" },
+        { "fieldPath": "score", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "totalLessonsCompleted", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "totalVocabularyLearned", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "progressPercentage", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "currentLevel", "order": "DESCENDING" },
+        { "fieldPath": "progressPercentage", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "challenge_exercises",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "challengeType", "order": "ASCENDING" },
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "friend_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "participants", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "friend_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "senderId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "friend_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "receiverId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

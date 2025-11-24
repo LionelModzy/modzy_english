@@ -338,7 +338,7 @@ class LearningProgressService {
         if (data['activityType'] == 'vocabulary_practice') {
           allActivities.add({
             'type': 'vocabulary',
-            'title': 'Luyện từ vựng',
+            'title': 'Vocabulary Practice',
             'subtitle': _getPracticeTypeDisplayName(details['mode'] ?? 'flashcard'),
             'accuracy': details['accuracy'] ?? 0,
             'completion': details['accuracy'] ?? 0,
@@ -367,8 +367,8 @@ class LearningProgressService {
         final data = doc.data();
         allActivities.add({
           'type': 'lesson',
-          'title': data['lessonTitle'] ?? 'Bài học',
-          'subtitle': 'Bài học hoàn thành',
+          'title': data['lessonTitle'] ?? 'Lesson Completed',
+          'subtitle': 'Lesson completed',
           'completion': data['completionPercentage'] ?? 0,
           'accuracy': data['completionPercentage'] ?? 0,
           'timestamp': data['lastStudied'],
@@ -392,6 +392,87 @@ class LearningProgressService {
       return allActivities.take(limit).toList();
     } catch (e) {
       if (kDebugMode) print('Error getting recent history: $e');
+      return [];
+    }
+  }
+
+  // Get detailed learning history for learning history screen (compatible format)
+  static Future<List<Map<String, dynamic>>> getDetailedLearningHistory({int limit = 20}) async {
+    try {
+      final userId = _auth.currentUser?.uid;
+      if (userId == null) return [];
+
+      final List<Map<String, dynamic>> allActivities = [];
+
+      // Get recent lesson progress with proper format
+      final lessonProgress = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('lesson_progress')
+          .orderBy('lastStudied', descending: true)
+          .limit(limit)
+          .get();
+
+      for (var doc in lessonProgress.docs) {
+        final data = doc.data();
+        allActivities.add({
+          'type': 'lesson',
+          'title': data['lessonTitle'] ?? 'Unknown Lesson',
+          'date': (data['lastStudied'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          'score': (data['completionPercentage'] ?? 0).round(),
+          'timeSpent': data['timeSpent'] ?? 0,
+          'lessonId': data['lessonId'] ?? '',
+          'status': 'completed',
+          'details': {
+            'lessonId': data['lessonId'],
+            'timeSpent': data['timeSpent'] ?? 0,
+          }
+        });
+      }
+
+      // Get vocabulary practice sessions
+      final generalProgress = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('general_progress')
+          .where('activityType', isEqualTo: 'vocabulary_practice')
+          .orderBy('completedAt', descending: true)
+          .limit(limit)
+          .get();
+
+      for (var doc in generalProgress.docs) {
+        final data = doc.data();
+        final details = data['details'] ?? {};
+        
+        allActivities.add({
+          'type': 'vocabulary',
+          'title': 'Vocabulary Practice',
+          'date': (data['completedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          'score': (details['accuracy'] ?? 0).round(),
+          'timeSpent': details['timeSpent'] ?? 0,
+          'status': 'completed',
+          'word': details['word'] ?? '',
+          'translation': details['translation'] ?? '',
+          'mastery': details['accuracy'] >= 80 ? 'learned' : 'practicing',
+          'practiceCount': details['practiceCount'] ?? 1,
+          'accuracy': (details['accuracy'] ?? 0).round(),
+          'category': details['category'] ?? 'General',
+          'difficulty': details['difficulty'] ?? 'Beginner',
+          'partOfSpeech': details['partOfSpeech'] ?? 'Unknown',
+          'example': details['example'] ?? '',
+        });
+      }
+
+      // Sort all activities by date
+      allActivities.sort((a, b) {
+        final aDate = a['date'] as DateTime;
+        final bDate = b['date'] as DateTime;
+        return bDate.compareTo(aDate);
+      });
+
+      return allActivities.take(limit).toList();
+    } catch (e) {
+      if (kDebugMode) print('Error getting detailed learning history: $e');
       return [];
     }
   }

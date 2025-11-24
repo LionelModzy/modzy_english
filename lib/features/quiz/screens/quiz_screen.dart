@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/quiz_service.dart';
+import '../../../core/services/challenge_service.dart';
 import '../../../models/quiz_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class QuizScreen extends StatefulWidget {
   final QuizModel quiz;
+  final String? challengeId;
 
-  const QuizScreen({super.key, required this.quiz});
+  const QuizScreen({super.key, required this.quiz, this.challengeId});
 
   @override
   State<QuizScreen> createState() => _QuizScreenState();
@@ -764,6 +767,25 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
       );
 
       await QuizService.submitQuizResult(result);
+
+      // If this is a challenge, submit result to challenge
+      if (widget.challengeId != null) {
+        final userId = FirebaseAuth.instance.currentUser?.uid;
+        if (userId != null) {
+          await ChallengeService.submitChallengeResult(
+            challengeId: widget.challengeId!,
+            userId: userId,
+            score: result.score,
+            totalPoints: result.totalPoints,
+            percentage: result.percentage,
+            timeSpent: result.timeSpent,
+            extraData: {
+              'quizId': widget.quiz.id,
+              'quizTitle': widget.quiz.title,
+            },
+          );
+        }
+      }
     } catch (e) {
       print('Error saving quiz result: $e');
       // Show error dialog if needed

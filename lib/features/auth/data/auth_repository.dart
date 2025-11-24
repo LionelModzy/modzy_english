@@ -89,6 +89,7 @@ class AuthRepository {
           totalVocabularyLearned: 0,
           currentLevel: 1,
           progressPercentage: 0.0,
+          friends: const [],
         );
 
         await FirebaseService.createUserDocument(

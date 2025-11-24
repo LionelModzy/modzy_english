@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/custom_button.dart';
+import '../../../models/lesson_model.dart';
+import '../../../core/services/lesson_service.dart';
+import '../../lessons/screens/lesson_detail_screen.dart';
+
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -396,12 +400,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                 const Spacer(),
                 CustomButton(
                   text: 'Start Lesson',
-                  onPressed: () {
-                    // TODO: Navigate to lesson
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Starting ${lesson['title']}')),
-                    );
-                  },
+                  onPressed: () => _openLesson(lesson),
                   width: 100,
                   height: 32,
                 ),
@@ -676,12 +675,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                     const Spacer(),
                     CustomButton(
                       text: 'Watch',
-                      onPressed: () {
-                        // TODO: Open video player
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Playing ${video['title']}')),
-                        );
-                      },
+                      onPressed: () => _openVideo(video),
                       width: 80,
                       height: 32,
                     ),
@@ -775,6 +769,191 @@ class _FavoritesScreenState extends State<FavoritesScreen>
             width: 100,
             height: 40,
             color: AppColors.error,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openLesson(Map<String, dynamic> lessonData) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // Try to fetch the real lesson from Firebase
+      final lesson = await LessonService.getLessonById(lessonData['id']);
+      
+      if (mounted) Navigator.pop(context); // Remove loading dialog
+
+      if (lesson != null) {
+        // Navigate to real lesson
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => LessonDetailScreen(lesson: lesson),
+            ),
+          );
+        }
+      } else {
+        // Fallback: Show lesson info dialog since this is mock data
+        _showLessonInfoDialog(lessonData);
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context); // Remove loading dialog
+      // Show error and lesson info dialog
+      _showLessonInfoDialog(lessonData);
+    }
+  }
+
+  void _showLessonInfoDialog(Map<String, dynamic> lessonData) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(lessonData['title']),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(lessonData['description']),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(Icons.schedule, size: 16, color: AppColors.textSecondary),
+                const SizedBox(width: 4),
+                Text('Duration: ${lessonData['duration']}'),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.trending_up, size: 16, color: AppColors.textSecondary),
+                const SizedBox(width: 4),
+                Text('Level: ${lessonData['difficulty']}'),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info, color: AppColors.warning, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This is a favorite item. Connect to real lesson data to access full content.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Navigate to lessons screen to find real lessons
+              Navigator.pushNamed(context, '/lessons');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Browse Lessons'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openVideo(Map<String, dynamic> videoData) {
+    // For now, show video info dialog since this is mock data
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(videoData['title']),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(videoData['description']),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(Icons.play_circle, size: 16, color: AppColors.textSecondary),
+                const SizedBox(width: 4),
+                Text('Duration: ${videoData['duration']}'),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.visibility, size: 16, color: AppColors.textSecondary),
+                const SizedBox(width: 4),
+                Text('Views: ${videoData['views']}'),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.info.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info, color: AppColors.info, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Video player feature will be available when connected to real video content.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Opening video: ${videoData['title']}'),
+                  action: SnackBarAction(
+                    label: 'Coming Soon',
+                    onPressed: () {},
+                  ),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.secondary,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Play Video'),
           ),
         ],
       ),

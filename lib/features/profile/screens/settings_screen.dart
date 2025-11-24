@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/services/preferences_service.dart';
+import '../../auth/screens/login_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -462,13 +465,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             text: 'Delete',
             onPressed: () {
               Navigator.of(context).pop();
-              // TODO: Implement account deletion
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Account deletion - Coming Soon!'),
-                  backgroundColor: AppColors.error,
-                ),
-              );
+              _deleteAccount();
             },
             width: 100,
             height: 40,
@@ -477,5 +474,252 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _deleteAccount() async {
+    try {
+      // Show final confirmation dialog
+      final bool? shouldDelete = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.warning, color: AppColors.error),
+              SizedBox(width: 8),
+              Text('Final Confirmation'),
+            ],
+          ),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'This action is irreversible!',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.error,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text('Are you absolutely sure you want to delete your account?'),
+              SizedBox(height: 16),
+              Text(
+                'All your data will be permanently deleted:',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              SizedBox(height: 8),
+              Text('• Learning progress and history'),
+              Text('• Favorite lessons and vocabulary'),
+              Text('• Quiz results and achievements'),
+              Text('• Profile information'),
+              Text('• Account settings'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('DELETE ACCOUNT'),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldDelete == true && mounted) {
+        // Show loading dialog
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Deleting account...'),
+              ],
+            ),
+          ),
+        );
+
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          final userId = user.uid;
+
+          // Delete user data from Firestore
+          await _deleteUserData(userId);
+
+          // Delete Firebase Auth account
+          await user.delete();
+
+          if (mounted) {
+            // Close loading dialog
+            Navigator.of(context).pop();
+
+            // Show success message
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Account deleted successfully'),
+                backgroundColor: AppColors.success,
+              ),
+            );
+
+            // Navigate to sign-in screen and clear navigation stack
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => const LoginScreen()),
+              (route) => false,
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        // Close loading dialog if it's open
+        Navigator.of(context).pop();
+
+        String errorMessage = 'Failed to delete account';
+        
+        if (e is FirebaseAuthException) {
+          switch (e.code) {
+            case 'requires-recent-login':
+              errorMessage = 'Please sign in again before deleting your account for security reasons.';
+              break;
+            case 'user-not-found':
+              errorMessage = 'User account not found.';
+              break;
+            default:
+              errorMessage = 'Authentication error: ${e.message}';
+          }
+        }
+
+        // Show error dialog
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.error, color: AppColors.error),
+                SizedBox(width: 8),
+                Text('Deletion Failed'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(errorMessage),
+                if (e is FirebaseAuthException && e.code == 'requires-recent-login') ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.info.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.info, color: AppColors.info, size: 20),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Sign out and sign in again, then try deleting your account.',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+              if (e is FirebaseAuthException && e.code == 'requires-recent-login')
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    _signOutUser();
+                  },
+                  child: const Text('Sign Out'),
+                ),
+            ],
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteUserData(String userId) async {
+    final firestore = FirebaseFirestore.instance;
+    
+    try {
+      // Delete user document and subcollections
+      final batch = firestore.batch();
+      
+      // Delete main user document
+      batch.delete(firestore.collection('users').doc(userId));
+      
+      // Delete subcollections (Firebase doesn't auto-delete subcollections)
+      final subcollections = [
+        'lesson_progress',
+        'quiz_results',
+        'vocabulary_progress',
+        'vocabulary_mastery',
+        'general_progress',
+        'lesson_media_progress',
+        'favorites',
+        'notes',
+      ];
+      
+      for (String subcollection in subcollections) {
+        final docs = await firestore
+            .collection('users')
+            .doc(userId)
+            .collection(subcollection)
+            .get();
+        
+        for (var doc in docs.docs) {
+          batch.delete(doc.reference);
+        }
+      }
+      
+      await batch.commit();
+    } catch (e) {
+      print('Error deleting user data: $e');
+      // Continue with account deletion even if some data deletion fails
+    }
+  }
+
+  Future<void> _signOutUser() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error signing out: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 } 

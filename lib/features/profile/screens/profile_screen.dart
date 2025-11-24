@@ -12,6 +12,7 @@ import 'edit_profile_screen.dart';
 import 'settings_screen.dart';
 import 'learning_history_screen.dart';
 import 'favorites_screen.dart';
+import 'help_support_screen.dart';
 import '../../../core/services/user_progress_utils.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -411,9 +412,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: 'Help & Support',
               subtitle: 'Get help and contact support',
               onTap: () {
-                // TODO: Navigate to help
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Help & Support - Coming Soon!')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const HelpSupportScreen(),
+                  ),
                 );
               },
             ),

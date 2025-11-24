@@ -10,6 +10,8 @@ import 'quiz_management_screen.dart';
 import 'vocabulary_management_screen.dart';
 import 'user_management_screen.dart';
 import 'analytics_screen.dart';
+import 'mini_game_management_screen.dart';
+import 'challenge_exercise_management_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -314,6 +316,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (context) => const QuizManagementScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildActionCard(
+                    icon: Icons.sports_kabaddi_rounded,
+                    title: 'Quản lý Bài tập Challenge',
+                    subtitle: 'Tạo và quản lý bài tập thách đấu',
+                    color: const Color(0xFFFF6B6B),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const ChallengeExerciseManagementScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildActionCard(
+                    icon: Icons.videogame_asset_rounded,
+                    title: 'Quản lý Mini Games',
+                    subtitle: 'Tạo và quản lý game học từ vựng',
+                    color: const Color(0xFFEC4899),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const MiniGameManagementScreen(),
                         ),
                       );
                     },

@@ -18,12 +18,83 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
+    function isFriendRequestParticipant(data) {
+      return request.auth != null &&
+             (
+               data.senderId == request.auth.uid ||
+               data.receiverId == request.auth.uid ||
+               (data.participants is list && data.participants.hasAny([request.auth.uid]))
+             );
+    }
+
+    function isFriendMutation() {
+      return request.auth != null &&
+             request.resource.data.diff(resource.data).changedKeys().hasOnly(['friends', 'updatedAt']);
+    }
+
+    function isChallengeParticipant(challengeData) {
+      return request.auth != null &&
+        (challengeData.challengerId == request.auth.uid ||
+         challengeData.opponentId == request.auth.uid);
+    }
+
+    function validChallengeKeys(data) {
+      return data.keys().hasOnly([
+        'challengerId',
+        'challengerName',
+        'opponentId',
+        'opponentName',
+        'challengeType',
+        'status',
+        'createdAt',
+        'updatedAt',
+        'expiresAt',
+        'metadata',
+        'participants',
+        'results',
+      ]);
+    }
+
+    function validChallengeParticipants(data) {
+      return data.participants is list &&
+             data.participants.size() == 2 &&
+             data.participants.hasOnly([data.challengerId, data.opponentId]);
+    }
+
+    function validFriendRequestKeys(data) {
+      return data.keys().hasOnly([
+        'senderId',
+        'senderName',
+        'senderAvatar',
+        'receiverId',
+        'receiverName',
+        'receiverAvatar',
+        'status',
+        'createdAt',
+        'updatedAt',
+        'participants',
+      ]);
+    }
+
+    function validChallengeStatusTransition(oldStatus, newStatus) {
+      return (oldStatus == newStatus) ||
+             (oldStatus == 'pending' && (newStatus == 'accepted' || newStatus == 'declined')) ||
+             (oldStatus == 'accepted' && (newStatus == 'completed' || newStatus == 'accepted')) ||
+             (oldStatus == 'declined' && newStatus == 'declined') ||
+             (oldStatus == 'completed' && newStatus == 'completed');
+    }
+
     // Users collection
     match /users/{userId} {
       // Allow read/write for the user themselves
       allow read, write: if isOwner(userId);
+      // Allow friend list updates (for adding/removing friends)
+      allow update: if isAuthenticated() && 
+        (isOwner(userId) || isFriendMutation());
       // Allow admin to read/write all users
       allow read, write: if isAdmin();
+      // Allow authenticated users to read leaderboard-safe fields
+      allow read: if isAuthenticated();
       
       // User subcollections - favorites
       match /favorites/{favoriteId} {
@@ -56,6 +127,73 @@ service cloud.firestore {
       }
     }
 
+    // Challenges collection
+    match /challenges/{challengeId} {
+      allow create: if request.auth != null &&
+        request.resource.data.challengerId == request.auth.uid &&
+        request.resource.data.opponentId != request.auth.uid &&
+        validChallengeKeys(request.resource.data) &&
+        validChallengeParticipants(request.resource.data) &&
+        request.resource.data.status == 'pending';
+
+      // Allow read if user is a participant (challenger or opponent)
+      // For queries, Firestore checks this rule for each document in the result
+      // resource.data will be available for each document
+      allow read: if isAdmin() || 
+        (request.auth != null && 
+         resource != null &&
+         (resource.data.challengerId == request.auth.uid || 
+          resource.data.opponentId == request.auth.uid));
+
+      allow update: if resource != null &&
+        isChallengeParticipant(resource.data) &&
+        validChallengeKeys(request.resource.data) &&
+        validChallengeParticipants(request.resource.data) &&
+        request.resource.data.challengerId == resource.data.challengerId &&
+        request.resource.data.opponentId == resource.data.opponentId &&
+        validChallengeStatusTransition(resource.data.status, request.resource.data.status);
+
+      allow delete: if isAdmin();
+    }
+
+    // Friend requests collection
+    match /friend_requests/{requestId} {
+      // Allow read if user is authenticated and is either sender or receiver
+      // The service now uses two separate queries:
+      // 1. where('senderId', isEqualTo: userId)
+      // 2. where('receiverId', isEqualTo: userId)
+      // So we check if user is sender or receiver
+      allow read: if request.auth != null && 
+        (
+          resource.data.senderId == request.auth.uid ||
+          resource.data.receiverId == request.auth.uid
+        );
+
+      allow create: if request.auth != null &&
+        validFriendRequestKeys(request.resource.data) &&
+        request.resource.data.senderId == request.auth.uid &&
+        request.resource.data.receiverId != request.auth.uid &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.participants is list &&
+        request.resource.data.participants.hasOnly(
+          [request.resource.data.senderId, request.resource.data.receiverId]);
+
+      allow update: if resource != null &&
+        validFriendRequestKeys(request.resource.data) &&
+        request.resource.data.senderId == resource.data.senderId &&
+        request.resource.data.receiverId == resource.data.receiverId &&
+        request.resource.data.participants == resource.data.participants &&
+        resource.data.status == 'pending' &&
+        (
+          (request.auth != null &&
+           request.auth.uid == resource.data.receiverId &&
+           request.resource.data.status in ['accepted', 'declined']) ||
+          (request.auth != null &&
+           request.auth.uid == resource.data.senderId &&
+           request.resource.data.status == 'cancelled')
+        );
+    }
+
     // Lessons collection
     match /lessons/{lessonId} {
       // Allow read for authenticated users
@@ -68,13 +206,26 @@ service cloud.firestore {
     match /vocabulary/{vocabId} {
       // Allow read for authenticated users
       allow read: if isAuthenticated();
-      // Allow write for admin only
-      allow write: if isAdmin();
+      // Allow create for authenticated users (for sample data)
+      allow create: if isAuthenticated();
+      // Allow update for admin only
+      allow update: if isAdmin();
+      // Allow delete for admin only
+      allow delete: if isAdmin();
     }
 
     // Quizzes collection
     match /quizzes/{quizId} {
       // Allow read for authenticated users (active quizzes)
+      allow read: if isAuthenticated();
+      // Allow write for admin only
+      allow write: if isAdmin();
+    }
+
+    // Challenge exercises collection
+    match /challenge_exercises/{exerciseId} {
+      // Allow read for authenticated users (includes get and list queries)
+      // Note: allow read includes both get() and list() operations
       allow read: if isAuthenticated();
       // Allow write for admin only
       allow write: if isAdmin();
@@ -106,6 +257,28 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       // Allow write for admin only
       allow write: if isAdmin();
+    }
+
+    // Mini games collection
+    match /mini_games/{gameId} {
+      // Allow read for authenticated users (active games only)
+      allow read: if isAuthenticated() && resource.data.isActive == true;
+      // Allow create for authenticated users (for sample data)
+      allow create: if isAuthenticated();
+      // Allow update for admin only
+      allow update: if isAdmin();
+      // Allow delete for admin only
+      allow delete: if isAdmin();
+    }
+
+    // Game scores collection
+    match /game_scores/{scoreId} {
+      // Allow read/write for authenticated users when creating their own scores
+      allow create: if isAuthenticated();
+      // Allow read/write for the user who owns the score
+      allow read, write: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Allow admin to read/write all game scores for analytics
+      allow read, write: if isAdmin();
     }
 
     // Allow admin to read/write any collection for comprehensive management
