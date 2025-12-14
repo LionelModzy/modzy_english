@@ -1,0 +1,163 @@
+@startuml SD_LamBaiQuiz - Sequence Diagram: Làm bài Quiz & xem kết quả
+
+title Sequence Diagram: Làm bài Quiz & xem kết quả
+
+actor "Học viên" as Student
+participant "Giao diện danh sách Quiz" as QuizListScreen
+participant "Giao diện làm Quiz" as QuizScreen
+participant "Dịch vụ Quiz" as QuizService
+participant "Dịch vụ thách đấu" as ChallengeService
+participant "Cơ sở dữ liệu (Firestore)" as DB
+
+== Luồng chính ==
+
+Student -> QuizListScreen : 1. Mở danh sách Quiz
+activate QuizListScreen
+
+QuizListScreen -> DB : 2. Lấy danh sách Quiz
+activate DB
+DB --> QuizListScreen : 3. Danh sách Quiz
+deactivate DB
+
+QuizListScreen --> Student : 4. Hiển thị danh sách Quiz
+
+Student -> QuizListScreen : 5. Chọn Quiz muốn làm
+QuizListScreen -> QuizScreen : 6. Chuyển đến màn hình làm Quiz\n(với quizId)
+activate QuizScreen
+deactivate QuizListScreen
+
+QuizScreen -> DB : 7. Lấy chi tiết Quiz
+activate DB
+DB --> QuizScreen : 8. QuizModel với questions
+deactivate DB
+
+QuizScreen -> QuizScreen : 9. Khởi tạo phiên làm bài
+note right: - Initialize answers list\n- Set timer (nếu có)\n- Set currentQuestionIndex = 0\n- Set timeElapsed = 0
+
+alt Quiz có giới hạn thời gian
+    QuizScreen -> QuizScreen : 10. Bắt đầu đếm ngược
+    note right: timeRemaining = timeLimit
+end
+
+QuizScreen --> Student : 11. Hiển thị câu hỏi đầu tiên
+note right: - Câu hỏi\n- Các lựa chọn\n- Timer (nếu có)\n- Progress bar
+
+loop Cho mỗi câu hỏi
+    Student -> QuizScreen : 12. Đọc câu hỏi
+    
+    alt Câu hỏi trắc nghiệm (Multiple Choice)
+        Student -> QuizScreen : 13. Chọn một đáp án
+        QuizScreen -> QuizScreen : 14. Lưu đáp án đã chọn
+    else Câu hỏi nhiều đáp án (Multiple Select)
+        Student -> QuizScreen : 13. Chọn nhiều đáp án
+        QuizScreen -> QuizScreen : 14. Lưu selectedAnswers[]
+    else Câu hỏi điền từ (Fill in Blank)
+        Student -> QuizScreen : 13. Nhập đáp án text
+        QuizScreen -> QuizScreen : 14. Lưu text answer
+    else Câu hỏi trả lời ngắn (Short Answer)
+        Student -> QuizScreen : 13. Nhập câu trả lời
+        QuizScreen -> QuizScreen : 14. Lưu short answer
+    end
+    
+    QuizScreen -> QuizScreen : 15. saveCurrentAnswer()
+    
+    alt Không phải câu hỏi cuối
+        Student -> QuizScreen : 16. Nhấn "Câu tiếp theo"
+        QuizScreen -> QuizScreen : 17. currentQuestionIndex++
+        QuizScreen --> Student : 18. Hiển thị câu hỏi tiếp theo
+    else Câu hỏi cuối
+        Student -> QuizScreen : 16. Nhấn "Nộp bài"
+        QuizScreen -> QuizScreen : 17. Chuyển đến submit flow
+    end
+end
+
+Student -> QuizScreen : 19. Nhấn "Nộp bài"
+
+QuizScreen -> QuizScreen : 20. Hiển thị xác nhận nộp bài
+
+alt Xác nhận nộp bài
+    QuizScreen -> QuizScreen : 21. Dừng timer (nếu có)
+    QuizScreen -> QuizScreen : 22. Set isQuizCompleted = true
+    
+    QuizScreen -> QuizService : 23. gradeQuiz(quiz, answers, timeElapsed)
+    activate QuizService
+    
+    QuizService -> QuizService : 24. Tính điểm số
+    note right: - So sánh đáp án với đáp án đúng\n- Tính số câu đúng\n- Tính điểm (điểm/câu * số câu đúng)\n- Tính tỉ lệ đúng (%)\n- Xác định đạt/không đạt
+    
+    loop Cho mỗi câu hỏi
+        QuizService -> QuizService : 25. Chấm điểm câu hỏi
+        QuizService -> QuizService : 26. Xác định isCorrect
+        QuizService -> QuizService : 27. Tính pointsEarned
+    end
+    
+    QuizService -> QuizService : 28. Tạo QuizResult object
+    note right: - quizId\n- userId\n- score\n- totalQuestions\n- correctAnswers\n- answers (chi tiết)\n- timeSpent\n- percentage\n- passed (true/false)
+    
+    QuizService --> QuizScreen : 29. QuizResult
+    deactivate QuizService
+    
+    QuizScreen -> QuizService : 30. submitQuizResult(result)
+    activate QuizService
+    
+    QuizService -> DB : 31. Lưu kết quả vào quiz_results
+    activate DB
+    note right: quiz_results/{resultId}\n  - quizId\n  - userId\n  - score\n  - totalQuestions\n  - correctAnswers\n  - answers\n  - completedAt\n  - passed
+    DB --> QuizService : 32. Thành công
+    deactivate DB
+    
+    QuizService -> DB : 33. Cập nhật thống kê Quiz
+    activate DB
+    note right: quizzes/{quizId}\n  - totalAttempts++\n  - totalPassed++ (nếu đạt)\n  - averageScore\n  - passRate
+    DB --> QuizService : 34. Thành công
+    deactivate DB
+    
+    QuizService --> QuizScreen : 35. Thành công
+    deactivate QuizService
+    
+    alt Quiz này là thách đấu (challenge)
+        QuizScreen -> ChallengeService : 36. submitChallengeResult(\n  challengeId, userId, score)
+        activate ChallengeService
+        ChallengeService -> DB : 37. Cập nhật kết quả thách đấu
+        activate DB
+        note right: challenges/{challengeId}\n  - challengerScore\n  - challengeeScore\n  - status: 'completed'
+        DB --> ChallengeService : 38. Thành công
+        deactivate DB
+        ChallengeService --> QuizScreen : 39. Thành công
+        deactivate ChallengeService
+    end
+    
+    QuizScreen -> QuizScreen : 40. Set showResults = true
+    QuizScreen --> Student : 41. Hiển thị kết quả Quiz
+    note right: - Tổng điểm\n- Số câu đúng / Tổng số câu\n- Tỉ lệ đúng (%)\n- Đạt / Không đạt\n- Thời gian làm bài\n- Animation kết quả
+    
+    Student -> QuizScreen : 42. Xem chi tiết từng câu
+    QuizScreen --> Student : 43. Hiển thị chi tiết đáp án
+    note right: - Câu hỏi\n- Đáp án đã chọn\n- Đáp án đúng\n- Giải thích (nếu có)\n- Đúng / Sai
+    
+    alt Quiz đạt (score >= passingScore)
+        QuizScreen -> DB : 44. Cập nhật thống kê học viên
+        activate DB
+        note right: users/{userId}\n  - totalQuizzesCompleted++\n  - Sync progress
+        DB --> QuizScreen : 45. Thành công
+        deactivate DB
+    end
+    
+    alt Học viên muốn làm lại
+        Student -> QuizScreen : 46. Nhấn "Làm lại"
+        QuizScreen -> QuizScreen : 47. Reset quiz state
+        QuizScreen -> QuizScreen : 48. setShowResults = false
+        QuizScreen -> QuizScreen : 49. Reinitialize quiz
+        QuizScreen --> Student : 50. Hiển thị lại câu hỏi đầu tiên
+    else Học viên hoàn thành
+        Student -> QuizScreen : 46. Nhấn "Hoàn thành"
+        QuizScreen -> QuizListScreen : 47. Quay về danh sách Quiz
+        deactivate QuizScreen
+    end
+    
+else Hủy nộp bài
+    QuizScreen --> Student : 21. Quay lại làm bài
+end
+
+@enduml
+

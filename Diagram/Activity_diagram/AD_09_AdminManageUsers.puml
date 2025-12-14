@@ -1,0 +1,99 @@
+@startuml AD_09_AdminManageUsers - Activity Diagram: Quản lý người dùng (Admin)
+
+title Activity Diagram: Quản lý người dùng (Admin Manage Users)
+
+start
+
+:Admin mở Admin Dashboard;
+
+:Admin nhấn "Quản lý Người dùng";
+
+:Lấy danh sách tất cả users từ Firestore;
+
+:Hiển thị danh sách người dùng;
+note right
+  - Tên
+  - Email
+  - Role
+  - Status (Active/Inactive)
+  - Progress
+  - Created At
+end note
+
+if (Admin muốn tìm kiếm?) then (Có)
+  :Nhập từ khóa (tên/email);
+  :Query users với keyword;
+  :Hiển thị kết quả tìm kiếm;
+endif
+
+if (Admin muốn xem chi tiết?) then (Có)
+  :Mở dialog chi tiết người dùng;
+  note right
+    - Thông tin cá nhân
+    - Tiến độ học tập
+    - Lịch sử hoạt động
+    - Danh sách bạn bè
+    - Challenges
+  end note
+endif
+
+if (Admin muốn chỉnh sửa?) then (Có)
+  :Mở form chỉnh sửa;
+  :Chỉnh sửa thông tin;
+  note right
+    - Display Name
+    - Email
+    - Role
+    - Status
+  end note
+
+  :Nhấn "Lưu";
+
+  :Cập nhật user document trong Firestore;
+
+  if (Thay đổi email?) then (Có)
+    :Cập nhật email trên Firebase Auth;
+  endif
+
+  :Hiển thị thông báo thành công;
+  :Refresh danh sách;
+endif
+
+if (Admin muốn vô hiệu hóa?) then (Có)
+  :Hiển thị dialog xác nhận;
+
+  if (Xác nhận vô hiệu hóa?) then (Có)
+    :Cập nhật isActive = false trong Firestore;
+    :Disable user trên Firebase Auth;
+    :Cập nhật UI - user chuyển sang "Inactive";
+  endif
+endif
+
+if (Admin muốn kích hoạt?) then (Có)
+  :Cập nhật isActive = true trong Firestore;
+  :Enable user trên Firebase Auth;
+  :Cập nhật UI - user chuyển sang "Active";
+endif
+
+if (Admin muốn thay đổi vai trò?) then (Có)
+  :Hiển thị dialog chọn role;
+  note right
+    - User
+    - Teacher
+    - Admin
+  end note
+
+  :Chọn role mới;
+
+  :Cập nhật role field trong Firestore;
+
+  :Hiển thị thông báo thành công;
+  :Refresh danh sách;
+endif
+
+:Quay về Admin Dashboard;
+
+stop
+
+@enduml
+

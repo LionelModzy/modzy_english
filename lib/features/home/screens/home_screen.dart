@@ -6,12 +6,12 @@ import '../../../core/services/preferences_service.dart';
 import '../../../models/user_model.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../admin/screens/admin_dashboard_screen.dart';
+import '../../teacher/screens/teacher_dashboard_screen.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../lessons/screens/lessons_screen.dart';
 import '../../quiz/screens/quiz_list_screen.dart';
 import '../../vocabulary/screens/vocabulary_screen.dart';
-import '../../videos/screens/video_screen.dart';
 import '../../../core/services/user_progress_utils.dart';
 import '../../mini_games/screens/mini_games_menu_screen.dart';
 import '../../leaderboard/screens/leaderboard_screen.dart';
@@ -134,13 +134,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: _FeatureShortcutSection(
-                      onChallengeTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const FriendChallengeScreen()),
-                        );
-                      },
-                    ),
+                    child: _FeatureShortcutSection(),
                   ),
                 ),
                 
@@ -153,6 +147,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+                          );
+                        },
+                        isDark: isDark,
+                      ),
+                    ),
+                  ),
+                ],
+                if (currentUser?.isTeacher == true && currentUser?.isAdmin != true) ...[
+                  const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: _TeacherCard(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const TeacherDashboardScreen()),
                           );
                         },
                         isDark: isDark,
@@ -221,12 +231,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         isDark: isDark,
                       ),
                       _ActionCard(
-                        icon: Icons.videocam_rounded,
-                        title: 'Watch Videos',
-                        subtitle: 'English videos',
-                        color: _AppColors.success,
+                        icon: Icons.sports_kabaddi_rounded,
+                        title: 'Challenge',
+                        subtitle: 'Thách đấu bạn bè',
+                        color: _AppColors.feature4,
                         onTap: () {
-                          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VideoScreen()));
+                          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FriendChallengeScreen()));
                         },
                         isDark: isDark,
                       ),
@@ -532,6 +542,69 @@ class _AdminCard extends StatelessWidget {
   }
 }
 
+class _TeacherCard extends StatelessWidget {
+  final VoidCallback onTap;
+  final bool isDark;
+
+  const _TeacherCard({required this.onTap, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [_AppColors.secondary, _AppColors.secondary.withOpacity(0.7)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: _AppColors.secondary.withOpacity(0.25),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.school_rounded, color: Colors.white, size: 24),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Text(
+                  'Teacher Panel',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          CustomButton(
+            text: 'Open Teacher Dashboard',
+            onPressed: onTap,
+            icon: Icons.dashboard_rounded,
+            textColor: Colors.white,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ActionCard extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -616,9 +689,7 @@ class _ActionCard extends StatelessWidget {
   }
 }
 class _FeatureShortcutSection extends StatelessWidget {
-  final VoidCallback onChallengeTap;
-
-  const _FeatureShortcutSection({required this.onChallengeTap});
+  const _FeatureShortcutSection();
 
   @override
   Widget build(BuildContext context) {
@@ -634,12 +705,6 @@ class _FeatureShortcutSection extends StatelessWidget {
         'title': 'Group Study',
         'subtitle': 'Học nhóm, cùng tiến bộ',
         'color': _AppColors.feature3,
-      },
-      {
-        'icon': Icons.sports_kabaddi_rounded,
-        'title': 'Challenge',
-        'subtitle': 'Thách đấu bạn bè',
-        'color': _AppColors.feature4,
       },
     ];
 
@@ -714,7 +779,6 @@ class _FeatureShortcutSection extends StatelessWidget {
                 separatorBuilder: (_, __) => const SizedBox(width: 16),
                 itemBuilder: (context, i) {
                   final f = features[i];
-                  final isChallengeFeature = f['title'] == 'Challenge';
                   return SizedBox(
                     width: cardWidth,
                     child: _FeatureCard(
@@ -723,20 +787,16 @@ class _FeatureShortcutSection extends StatelessWidget {
                       subtitle: f['subtitle'] as String,
                       color: f['color'] as Color,
                       onTap: () {
-                        if (isChallengeFeature) {
-                          onChallengeTap();
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('${f['title']} - Coming soon!'),
-                              backgroundColor: _AppColors.primary,
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${f['title']} - Coming soon!'),
+                            backgroundColor: _AppColors.primary,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          );
-                        }
+                          ),
+                        );
                       },
                     ),
                   );

@@ -1,0 +1,141 @@
+@startuml SD_07_SendFriendRequest - Sequence Diagram: Gửi lời mời kết bạn
+
+title Sequence Diagram: Gửi lời mời kết bạn (Send Friend Request)
+
+actor "Người dùng\n(User)" as User
+participant "Friend Challenge Screen" as ChallengeScreen
+participant "Friend Service" as FriendService
+participant "Friend Request Service" as FriendRequestService
+participant "Firestore" as Firestore
+
+== Main Flow ==
+
+User -> ChallengeScreen: 1. Mở màn hình Friend Challenge
+activate ChallengeScreen
+
+ChallengeScreen -> ChallengeScreen: 2. Hiển thị tab "Kết bạn"
+
+User -> ChallengeScreen: 3. Nhập email hoặc tên người dùng
+
+User -> ChallengeScreen: 4. Nhấn "Tìm kiếm"
+
+ChallengeScreen -> FriendService: 5. findUserByEmailOrId(input)
+activate FriendService
+
+FriendService -> Firestore: 6. Tìm kiếm users
+activate Firestore
+note right: Query users collection với:\n- email == input\n- displayName contains input\n- uid == input
+Firestore --> FriendService: 7. List<UserModel>
+deactivate Firestore
+
+alt Tìm thấy người dùng
+    FriendService --> ChallengeScreen: 8. UserModel
+    deactivate FriendService
+    
+    ChallengeScreen -> ChallengeScreen: 9. Hiển thị kết quả tìm kiếm
+    note right: - Tên\n- Email\n- Level\n- Progress\n- Button "Gửi lời mời"
+    
+    User -> ChallengeScreen: 10. Chọn người dùng muốn kết bạn
+    User -> ChallengeScreen: 11. Nhấn "Gửi lời mời kết bạn"
+    
+    ChallengeScreen -> FriendRequestService: 12. sendRequest(sender, receiver)
+    activate FriendRequestService
+    
+    FriendRequestService -> FriendRequestService: 13. Kiểm tra senderId != receiverId
+    
+    alt Tự gửi request cho chính mình
+        FriendRequestService --> ChallengeScreen: 14. Error: selfNotAllowed
+        deactivate FriendRequestService
+        ChallengeScreen --> User: 15. Hiển thị lỗi "Bạn không thể kết bạn với chính mình"
+    else Không phải chính mình
+        FriendRequestService -> FriendService: 15. areFriends(userId, friendUserId)
+        activate FriendService
+        FriendService -> Firestore: 16. Kiểm tra trong friends collection
+        activate Firestore
+        Firestore --> FriendService: 17. Already friends: true/false
+        deactivate Firestore
+        FriendService --> FriendRequestService: 18. Already friends: true/false
+        deactivate FriendService
+        
+        alt Đã là bạn bè
+            FriendRequestService --> ChallengeScreen: 19. Error: alreadyFriends
+            deactivate FriendRequestService
+            ChallengeScreen --> User: 20. Hiển thị "Bạn đã là bạn bè với người này"
+        else Chưa là bạn bè
+            FriendRequestService -> Firestore: 19. Kiểm tra request đã gửi chưa
+            activate Firestore
+            note right: Query friend_requests collection:\n  senderId == sender.uid\n  receiverId == receiver.uid\n  status == 'pending'
+            Firestore --> FriendRequestService: 20. Existing request: yes/no
+            deactivate Firestore
+            
+            alt Đã có request pending
+                FriendRequestService --> ChallengeScreen: 21. Error: alreadyPending
+                deactivate FriendRequestService
+                ChallengeScreen --> User: 22. Hiển thị "Bạn đã gửi lời mời cho người này"
+            else Chưa có request
+                FriendRequestService -> Firestore: 21. Kiểm tra request ngược lại
+                activate Firestore
+                note right: Query friend_requests collection:\n  senderId == receiver.uid\n  receiverId == sender.uid\n  status == 'pending'
+                Firestore --> FriendRequestService: 22. Incoming request: yes/no
+                deactivate Firestore
+                
+                alt Có request ngược lại (incoming)
+                    FriendRequestService --> ChallengeScreen: 23. Error: incomingPending
+                    deactivate FriendRequestService
+                    ChallengeScreen --> User: 24. Hiển thị "Người này đã gửi lời mời cho bạn"
+                    ChallengeScreen -> ChallengeScreen: 25. (Tùy chọn) Tự động accept request
+                else Không có request
+                    FriendRequestService -> Firestore: 23. Tạo friend request document
+                    activate Firestore
+                    note right: friend_requests/{requestId}\n  - senderId\n  - senderName\n  - senderAvatar\n  - receiverId\n  - receiverName\n  - receiverAvatar\n  - status: 'pending'\n  - createdAt\n  - updatedAt\n  - participants: [senderId, receiverId]
+                    Firestore --> FriendRequestService: 24. Success
+                    deactivate Firestore
+                    
+                    FriendRequestService --> ChallengeScreen: 25. Success: sent
+                    deactivate FriendRequestService
+                    
+                    ChallengeScreen -> ChallengeScreen: 26. Hiển thị thông báo thành công
+                    note right: "Lời mời kết bạn đã được gửi!"
+                    
+                    ChallengeScreen -> ChallengeScreen: 27. Cập nhật UI
+                    note right: Button chuyển thành "Đã gửi lời mời"
+                    ChallengeScreen --> User: 28. Cập nhật giao diện
+                end
+            end
+        end
+    end
+    
+else Không tìm thấy người dùng
+    FriendService --> ChallengeScreen: 8. null
+    deactivate FriendService
+    ChallengeScreen --> User: 9. Hiển thị "Không tìm thấy người dùng phù hợp"
+end
+
+deactivate ChallengeScreen
+
+== Alternative Flows ==
+
+== A1: Tìm kiếm theo Friend Code/UID ==
+User -> ChallengeScreen: Nhập Friend Code (UID)
+ChallengeScreen -> FriendService: findUserByEmailOrId(uid)
+FriendService -> Firestore: Query users where uid == input
+Firestore --> FriendService: UserModel hoặc null
+FriendService --> ChallengeScreen: UserModel hoặc null
+
+== A2: Xem danh sách lời mời đã gửi ==
+User -> ChallengeScreen: Mở tab "Đã gửi"
+ChallengeScreen -> FriendRequestService: watchRequests(userId)
+FriendRequestService -> Firestore: Stream requests where senderId == userId
+Firestore --> FriendRequestService: Stream<FriendRequestModel>
+FriendRequestService --> ChallengeScreen: Stream requests
+ChallengeScreen --> User: Hiển thị danh sách requests đã gửi
+
+== A3: Xem danh sách lời mời đã nhận ==
+User -> ChallengeScreen: Mở tab "Đã nhận"
+ChallengeScreen -> FriendRequestService: watchRequests(userId)
+FriendRequestService -> Firestore: Stream requests where receiverId == userId
+Firestore --> FriendRequestService: Stream<FriendRequestModel>
+FriendRequestService --> ChallengeScreen: Stream requests
+ChallengeScreen --> User: Hiển thị danh sách requests đã nhận
+
+@enduml

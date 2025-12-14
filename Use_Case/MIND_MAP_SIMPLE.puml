@@ -1,0 +1,69 @@
+@startmindmap Modzy English - Mind Map (Simple)
+skinparam monochrome false
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+
+<style>
+mindmapDiagram {
+  .user {
+    BackgroundColor #E3F2FD
+    LineColor #1976D2
+  }
+  .admin {
+    BackgroundColor #FFEBEE
+    LineColor #B85450
+  }
+  .auth {
+    BackgroundColor #FFF9C4
+  }
+  .learning {
+    BackgroundColor #C8E6C9
+  }
+  .progress {
+    BackgroundColor #E1BEE7
+  }
+  .videos {
+    BackgroundColor #FFE0B2
+  }
+  .content {
+    BackgroundColor #BBDEFB
+  }
+  .user_mgmt {
+    BackgroundColor #F8BBD0
+  }
+  .analytics {
+    BackgroundColor #C5CAE9
+  }
+</style>
+
+* Modzy English App
+** User <<user>>
+*** Authentication & Account <<auth>>
+**** Đăng ký (Register)
+**** Đăng nhập (Login)
+**** Quên mật khẩu (Forgot password)
+**** Quản lý hồ sơ (Manage profile)
+*** Learning & Practice <<learning>>
+**** Xem danh sách bài học (View lesson list)
+**** Xem nội dung bài học (View lesson content)
+**** Làm bài kiểm tra (Take a test/quiz)
+**** Tra từ vựng (Look up vocabulary)
+**** Luyện từ vựng (Practice vocabulary)
+**** Đánh dấu từ yêu thích (Mark favorite words)
+*** Progress Tracking <<progress>>
+**** Theo dõi tiến độ học (Track learning progress)
+**** Quản lý bookmarks (Manage bookmarks)
+*** Videos <<videos>>
+**** Xem video bài học (Watch lesson videos)
+** Admin <<admin>>
+*** Content Management <<content>>
+**** CRUD Bài học (CRUD Lessons)
+**** CRUD Quiz (CRUD Quizzes)
+**** CRUD Từ vựng (CRUD Vocabulary)
+**** Upload Media (Upload Media)
+*** User Management <<user_mgmt>>
+**** Quản lý người dùng (Manage users)
+*** Analytics <<analytics>>
+**** Xem thống kê (View statistics)
+@endmindmap
+

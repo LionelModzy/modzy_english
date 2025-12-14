@@ -1,0 +1,162 @@
+@startuml UC_05_PracticeVocabulary - Luyện tập từ vựng
+
+title Use Case: Luyện tập từ vựng (Practice Vocabulary)
+
+actor "Người dùng\n(User)" as User
+participant "Vocabulary Screen" as VocabScreen
+participant "Vocabulary Practice Screen" as PracticeScreen
+participant "Vocabulary Service" as VocabService
+participant "Bookmark Service" as BookmarkService
+participant "Learning Progress Service" as ProgressService
+participant "Audio Player" as AudioPlayer
+participant "Firestore" as Firestore
+
+== Main Flow ==
+
+User -> VocabScreen: 1. Duyệt danh sách từ vựng
+activate VocabScreen
+
+User -> VocabScreen: 2. Chọn từ vựng muốn luyện tập
+alt Chọn từ vocabulary list
+    User -> VocabScreen: 3. Nhấn "Luyện tập" trên vocabulary card
+    VocabScreen -> PracticeScreen: 4. Mở màn hình luyện tập với vocabularyId
+else Chọn từ bookmark
+    User -> VocabScreen: 5. Mở tab "Bookmark"
+    User -> VocabScreen: 6. Chọn từ vựng đã bookmark
+    VocabScreen -> PracticeScreen: 7. Mở màn hình luyện tập với vocabularyId
+end
+
+activate PracticeScreen
+
+PracticeScreen -> VocabService: 8. getVocabularyById(vocabularyId)
+activate VocabService
+VocabService -> Firestore: 9. Lấy thông tin từ vựng
+activate Firestore
+Firestore --> VocabService: 10. VocabularyModel
+deactivate Firestore
+VocabService --> PracticeScreen: 11. VocabularyModel
+deactivate VocabService
+
+PracticeScreen -> PracticeScreen: 12. Hiển thị từ vựng
+note right: - Word (từ tiếng Anh)\n- Meaning (nghĩa tiếng Việt)\n- Example (ví dụ)\n- Image (hình ảnh)\n- Category\n- Difficulty
+
+User -> PracticeScreen: 13. Nghe phát âm
+PracticeScreen -> AudioPlayer: 14. playPronunciation(word)
+activate AudioPlayer
+note right: Sử dụng text-to-speech API
+AudioPlayer -> AudioPlayer: 15. Phát âm từ vựng
+AudioPlayer --> PracticeScreen: 16. Playback complete
+deactivate AudioPlayer
+
+User -> PracticeScreen: 17. Xem ví dụ sử dụng
+PracticeScreen -> PracticeScreen: 18. Hiển thị example sentence
+note right: - Câu ví dụ tiếng Anh\n- Nghĩa tiếng Việt
+
+User -> PracticeScreen: 19. Làm bài tập luyện tập
+PracticeScreen -> PracticeScreen: 20. Hiển thị bài tập
+note right: Các loại bài tập:\n- Điền từ vào chỗ trống\n- Chọn nghĩa đúng\n- Sắp xếp từ thành câu\n- Nghe và viết lại
+
+loop Cho mỗi bài tập
+    User -> PracticeScreen: 21. Làm bài tập
+    User -> PracticeScreen: 22. Nhấn "Kiểm tra"
+    PracticeScreen -> PracticeScreen: 23. Kiểm tra đáp án
+    alt Đáp án đúng
+        PracticeScreen -> PracticeScreen: 24. Hiển thị "Đúng!" + animation
+        PracticeScreen -> PracticeScreen: 25. Cộng điểm
+    else Đáp án sai
+        PracticeScreen -> PracticeScreen: 24. Hiển thị "Sai!" + đáp án đúng
+        PracticeScreen -> PracticeScreen: 25. Hiển thị giải thích
+    end
+end
+
+User -> PracticeScreen: 26. Hoàn thành luyện tập
+PracticeScreen -> PracticeScreen: 27. Tính điểm tổng
+PracticeScreen -> PracticeScreen: 28. Hiển thị kết quả
+note right: - Tổng điểm\n- Số câu đúng/tổng số câu\n- Thời gian luyện tập
+
+PracticeScreen -> ProgressService: 29. markVocabularyAsLearned(vocabularyId)
+activate ProgressService
+
+ProgressService -> Firestore: 30. Kiểm tra từ vựng đã học chưa
+activate Firestore
+Firestore --> ProgressService: 31. Chưa học
+deactivate Firestore
+
+ProgressService -> Firestore: 32. Thêm vào learnedVocabulary
+activate Firestore
+note right: - vocabularyId\n- userId\n- learnedAt\n- score\n- attempts
+Firestore --> ProgressService: 33. Success
+deactivate Firestore
+
+ProgressService -> Firestore: 34. Cập nhật user stats
+activate Firestore
+note right: - totalVocabularyLearned++\n- Cập nhật progressPercentage
+Firestore --> ProgressService: 35. Success
+deactivate Firestore
+
+ProgressService --> PracticeScreen: 36. Success
+deactivate ProgressService
+
+PracticeScreen -> PracticeScreen: 37. Hiển thị thông báo thành công
+note right: "Chúc mừng! Bạn đã học từ vựng này"
+
+alt Người dùng muốn bookmark
+    User -> PracticeScreen: 38. Nhấn "Đánh dấu"
+    PracticeScreen -> BookmarkService: 39. addBookmark(vocabularyId)
+    activate BookmarkService
+    BookmarkService -> Firestore: 40. Thêm vào bookmarks collection
+    activate Firestore
+    Firestore --> BookmarkService: 41. Success
+    deactivate Firestore
+    BookmarkService --> PracticeScreen: 42. Success
+    deactivate BookmarkService
+    PracticeScreen -> PracticeScreen: 43. Cập nhật icon bookmark
+end
+
+User -> PracticeScreen: 44. Nhấn "Hoàn thành"
+PracticeScreen -> VocabScreen: 45. Quay về danh sách từ vựng
+deactivate PracticeScreen
+deactivate VocabScreen
+
+== Alternative Flows ==
+
+== A1: Từ vựng đã học trước đó ==
+ProgressService -> Firestore: Kiểm tra từ vựng đã học
+Firestore --> ProgressService: Đã học
+ProgressService --> PracticeScreen: Warning: Từ vựng đã được học
+PracticeScreen -> PracticeScreen: Hiển thị "Bạn đã học từ vựng này"
+PracticeScreen -> PracticeScreen: Option "Luyện tập lại" hoặc "Xem kết quả trước"
+
+== A2: Luyện tập theo danh mục ==
+User -> VocabScreen: Chọn "Luyện tập theo danh mục"
+VocabScreen -> PracticeScreen: Mở với category và difficultyLevel
+PracticeScreen -> VocabService: getVocabularyByCategory(category, difficulty)
+VocabService -> Firestore: Lấy danh sách từ vựng
+Firestore --> VocabService: List<VocabularyModel>
+VocabService --> PracticeScreen: List từ vựng
+PracticeScreen -> PracticeScreen: Hiển thị từ vựng đầu tiên
+note right: Cho phép chuyển đổi giữa các từ vựng trong danh mục
+
+== A3: Lỗi phát âm ==
+AudioPlayer --> PracticeScreen: Error: Cannot play audio
+PracticeScreen -> PracticeScreen: Hiển thị lỗi "Không thể phát âm"
+PracticeScreen -> PracticeScreen: Option "Thử lại" hoặc "Bỏ qua"
+
+== A4: Lưu tiến độ luyện tập ==
+PracticeScreen -> PracticeScreen: Tự động lưu tiến độ khi làm bài tập
+PracticeScreen -> Firestore: Lưu progress vào session
+note right: - vocabularyId\n- currentExerciseIndex\n- answers\n- score
+Firestore --> PracticeScreen: Success
+
+== A5: Xem từ vựng liên quan ==
+PracticeScreen -> PracticeScreen: Hiển thị "Từ vựng liên quan"
+PracticeScreen -> VocabService: getRelatedVocabulary(category, difficulty)
+VocabService -> Firestore: Lấy từ vựng cùng category
+Firestore --> VocabService: List từ vựng
+VocabService --> PracticeScreen: List từ vựng
+PracticeScreen -> PracticeScreen: Hiển thị danh sách từ vựng liên quan
+User -> PracticeScreen: Chọn từ vựng liên quan
+PracticeScreen -> PracticeScreen: Chuyển đến từ vựng mới
+
+@enduml
+

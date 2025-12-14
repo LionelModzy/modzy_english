@@ -1,0 +1,127 @@
+@startuml SD_01_Register - Sequence Diagram: Đăng ký tài khoản
+
+title Sequence Diagram: Đăng ký tài khoản (Register Account)
+
+actor "Người dùng\n(User)" as User
+participant "Register Screen" as RegisterScreen
+participant "Auth Repository" as AuthRepo
+participant "Firebase Service" as FirebaseService
+participant "Firebase Auth" as FirebaseAuth
+participant "Firestore" as Firestore
+
+== Main Flow ==
+
+User -> RegisterScreen: 1. Mở màn hình đăng ký
+activate RegisterScreen
+
+RegisterScreen --> User: 2. Hiển thị form đăng ký
+
+User -> RegisterScreen: 3. Nhập email
+User -> RegisterScreen: 4. Nhập mật khẩu
+User -> RegisterScreen: 5. Nhập lại mật khẩu
+User -> RegisterScreen: 6. Nhập tên hiển thị
+User -> RegisterScreen: 7. Nhấn nút "Đăng ký"
+
+RegisterScreen -> RegisterScreen: 8. Validate dữ liệu đầu vào
+note right: - Email hợp lệ\n- Mật khẩu >= 6 ký tự\n- Mật khẩu khớp nhau\n- Tên không rỗng
+
+alt Dữ liệu hợp lệ
+    RegisterScreen -> AuthRepo: 9. registerWithEmailAndPassword(\n  email, password, displayName)
+    activate AuthRepo
+    
+    AuthRepo -> FirebaseService: 10. createUserWithEmailAndPassword(\n  email, password)
+    activate FirebaseService
+    
+    FirebaseService -> FirebaseAuth: 11. createUserWithEmailAndPassword()
+    activate FirebaseAuth
+    
+    alt Tạo tài khoản thành công
+        FirebaseAuth --> FirebaseService: 12. UserCredential
+        deactivate FirebaseAuth
+        
+        FirebaseService --> AuthRepo: 13. UserCredential
+        deactivate FirebaseService
+        
+        AuthRepo -> FirebaseAuth: 14. updateDisplayName(displayName)
+        activate FirebaseAuth
+        FirebaseAuth --> AuthRepo: 15. Success
+        deactivate FirebaseAuth
+        
+        AuthRepo -> UserModel: 16. Tạo UserModel object
+        note right: - uid\n- email\n- displayName\n- role: 'user'\n- createdAt\n- isActive: true\n- totalLessonsCompleted: 0\n- totalVocabularyLearned: 0\n- currentLevel: 1\n- progressPercentage: 0.0
+        
+        AuthRepo -> FirebaseService: 17. createUserDocument(uid, userData)
+        activate FirebaseService
+        FirebaseService -> Firestore: 18. Tạo document trong collection 'users'
+        activate Firestore
+        note right: users/{uid}\n  - uid\n  - email\n  - displayName\n  - role: 'user'\n  - createdAt\n  - isActive: true\n  - progress fields
+        Firestore --> FirebaseService: 19. Success
+        deactivate Firestore
+        FirebaseService --> AuthRepo: 20. Success
+        deactivate FirebaseService
+        
+        AuthRepo --> RegisterScreen: 21. Success + UserModel
+        deactivate AuthRepo
+        
+        RegisterScreen -> RegisterScreen: 22. Hiển thị thông báo thành công
+        note right: "Account created successfully!"
+        
+        RegisterScreen -> RegisterScreen: 23. Navigate to HomeScreen
+        RegisterScreen --> User: 24. Hiển thị màn hình chính
+        
+    else Email đã tồn tại
+        FirebaseAuth --> FirebaseService: 12. Error: Email already exists
+        deactivate FirebaseAuth
+        FirebaseService --> AuthRepo: 13. Error: Email already in use
+        deactivate FirebaseService
+        AuthRepo --> RegisterScreen: 21. Error: Email đã được sử dụng
+        deactivate AuthRepo
+        RegisterScreen --> User: 22. Hiển thị lỗi "Email đã được sử dụng"
+        
+    else Mật khẩu yếu
+        FirebaseAuth --> FirebaseService: 12. Error: Weak password
+        deactivate FirebaseAuth
+        FirebaseService --> AuthRepo: 13. Error: Password too weak
+        deactivate FirebaseService
+        AuthRepo --> RegisterScreen: 21. Error: Mật khẩu quá yếu
+        deactivate AuthRepo
+        RegisterScreen --> User: 22. Hiển thị lỗi "Mật khẩu phải có ít nhất 6 ký tự"
+        
+    else Lỗi khác
+        FirebaseAuth --> FirebaseService: 12. Error: Other error
+        deactivate FirebaseAuth
+        FirebaseService --> AuthRepo: 13. Error
+        deactivate FirebaseService
+        AuthRepo --> RegisterScreen: 21. Error message
+        deactivate AuthRepo
+        RegisterScreen --> User: 22. Hiển thị lỗi
+    end
+    
+else Dữ liệu không hợp lệ
+    RegisterScreen --> User: 9. Hiển thị lỗi validation
+    note right: - Email không đúng định dạng\n- Mật khẩu không khớp\n- Tên rỗng\n- Mật khẩu < 6 ký tự
+end
+
+deactivate RegisterScreen
+
+== Alternative Flows ==
+
+== A1: Người dùng hủy đăng ký ==
+User -> RegisterScreen: Hủy đăng ký
+RegisterScreen -> RegisterScreen: Navigate back to LoginScreen
+RegisterScreen --> User: Hiển thị màn hình đăng nhập
+
+== A2: Kết nối mạng lỗi ==
+FirebaseAuth --> FirebaseService: Error: Network error
+FirebaseService --> AuthRepo: Error: Không có kết nối mạng
+AuthRepo --> RegisterScreen: Error: Network error
+RegisterScreen --> User: Hiển thị lỗi "Vui lòng kiểm tra kết nối mạng"
+
+== A3: Lỗi Firestore ==
+Firestore --> FirebaseService: Error: Firestore write failed
+FirebaseService --> AuthRepo: Error: Failed to create user document
+AuthRepo -> FirebaseAuth: Xóa user đã tạo (rollback)
+AuthRepo --> RegisterScreen: Error: Lỗi hệ thống, vui lòng thử lại
+RegisterScreen --> User: Hiển thị lỗi "Đã xảy ra lỗi, vui lòng thử lại"
+
+@enduml

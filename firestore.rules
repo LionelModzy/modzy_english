@@ -8,6 +8,24 @@ service cloud.firestore {
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    // Helper function to check if user is teacher
+    function isTeacher() {
+      return request.auth != null && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+    }
+
+    // Helper function to check if user can manage content (admin or teacher)
+    function canManageContent() {
+      return request.auth != null && 
+             (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher');
+    }
+
+    // Helper function to check if user is content owner
+    function isContentOwner(createdBy) {
+      return request.auth != null && request.auth.uid == createdBy;
+    }
+
     // Helper function to check if user is authenticated
     function isAuthenticated() {
       return request.auth != null;
@@ -198,28 +216,42 @@ service cloud.firestore {
     match /lessons/{lessonId} {
       // Allow read for authenticated users
       allow read: if isAuthenticated();
-      // Allow write for admin only
-      allow write: if isAdmin();
+      // Allow create for teachers and admins
+      allow create: if canManageContent() && 
+                     request.resource.data.createdBy == request.auth.uid;
+      // Allow update/delete for admin or content owner (teacher)
+      allow update: if isAdmin() || 
+                     (isTeacher() && resource.data.createdBy == request.auth.uid);
+      allow delete: if isAdmin() || 
+                     (isTeacher() && resource.data.createdBy == request.auth.uid);
     }
 
     // Vocabulary collection
     match /vocabulary/{vocabId} {
       // Allow read for authenticated users
       allow read: if isAuthenticated();
-      // Allow create for authenticated users (for sample data)
-      allow create: if isAuthenticated();
-      // Allow update for admin only
-      allow update: if isAdmin();
-      // Allow delete for admin only
-      allow delete: if isAdmin();
+      // Allow create for teachers and admins
+      allow create: if canManageContent() && 
+                     request.resource.data.createdBy == request.auth.uid;
+      // Allow update/delete for admin or content owner (teacher)
+      allow update: if isAdmin() || 
+                     (isTeacher() && resource.data.createdBy == request.auth.uid);
+      allow delete: if isAdmin() || 
+                     (isTeacher() && resource.data.createdBy == request.auth.uid);
     }
 
     // Quizzes collection
     match /quizzes/{quizId} {
       // Allow read for authenticated users (active quizzes)
       allow read: if isAuthenticated();
-      // Allow write for admin only
-      allow write: if isAdmin();
+      // Allow create for teachers and admins
+      allow create: if canManageContent() && 
+                     request.resource.data.createdBy == request.auth.uid;
+      // Allow update/delete for admin or content owner (teacher)
+      allow update: if isAdmin() || 
+                     (isTeacher() && resource.data.createdBy == request.auth.uid);
+      allow delete: if isAdmin() || 
+                     (isTeacher() && resource.data.createdBy == request.auth.uid);
     }
 
     // Challenge exercises collection
@@ -227,8 +259,14 @@ service cloud.firestore {
       // Allow read for authenticated users (includes get and list queries)
       // Note: allow read includes both get() and list() operations
       allow read: if isAuthenticated();
-      // Allow write for admin only
-      allow write: if isAdmin();
+      // Allow create for teachers and admins
+      allow create: if canManageContent() && 
+                     request.resource.data.createdBy == request.auth.uid;
+      // Allow update/delete for admin or content owner (teacher)
+      allow update: if isAdmin() || 
+                     (isTeacher() && resource.data.createdBy == request.auth.uid);
+      allow delete: if isAdmin() || 
+                     (isTeacher() && resource.data.createdBy == request.auth.uid);
     }
 
     // Quiz results collection
@@ -255,20 +293,27 @@ service cloud.firestore {
     match /videos/{videoId} {
       // Allow read for authenticated users
       allow read: if isAuthenticated();
-      // Allow write for admin only
-      allow write: if isAdmin();
+      // Allow create for teachers and admins (if videos have createdBy field)
+      allow create: if canManageContent();
+      // Allow update/delete for admin or content owner (if videos have createdBy field)
+      allow update: if isAdmin() || 
+                     (isTeacher() && (!resource.data.keys().hasAny(['createdBy']) || resource.data.createdBy == request.auth.uid));
+      allow delete: if isAdmin() || 
+                     (isTeacher() && (!resource.data.keys().hasAny(['createdBy']) || resource.data.createdBy == request.auth.uid));
     }
 
     // Mini games collection
     match /mini_games/{gameId} {
       // Allow read for authenticated users (active games only)
       allow read: if isAuthenticated() && resource.data.isActive == true;
-      // Allow create for authenticated users (for sample data)
-      allow create: if isAuthenticated();
-      // Allow update for admin only
-      allow update: if isAdmin();
-      // Allow delete for admin only
-      allow delete: if isAdmin();
+      // Allow create for teachers and admins
+      allow create: if canManageContent() && 
+                     request.resource.data.createdBy == request.auth.uid;
+      // Allow update/delete for admin or content owner (teacher)
+      allow update: if isAdmin() || 
+                     (isTeacher() && resource.data.createdBy == request.auth.uid);
+      allow delete: if isAdmin() || 
+                     (isTeacher() && resource.data.createdBy == request.auth.uid);
     }
 
     // Game scores collection

@@ -1,0 +1,77 @@
+@startuml UC_07_Challenge_UseCase - Sơ đồ Use Case Thách đấu
+
+title Use Case Diagram: Tạo và Quản lý Thách đấu (Challenge Management)
+
+left to right direction
+
+actor "Người dùng\n(User)" as User
+
+rectangle "Hệ thống Modzy English\nPhân hệ Thách đấu" {
+  
+  ' Use cases chính
+  usecase "UC_07.1: Gửi lời thách đấu\n(Send Challenge)" as UC_Send #LightGreen
+  usecase "UC_07.2: Xem danh sách thách đấu\n(View Challenge List)" as UC_ViewList #LightYellow
+  usecase "UC_07.3: Xem chi tiết thách đấu\n(View Challenge Details)" as UC_ViewDetails #LightYellow
+  usecase "UC_07.4: Chấp nhận thách đấu\n(Accept Challenge)" as UC_Accept #LightYellow
+  usecase "UC_07.5: Từ chối thách đấu\n(Decline Challenge)" as UC_Decline #LightYellow
+  usecase "UC_07.6: Thực hiện bài thi đấu\n(Take Challenge Quiz/Game)" as UC_DoChallenge #LightCoral
+  usecase "UC_07.7: Nộp kết quả thách đấu\n(Submit Challenge Result)" as UC_SubmitResult #LightCoral
+  usecase "UC_07.8: Xem kết quả & So sánh\n(View Results & Compare)" as UC_ViewResult #Lavender
+  usecase "UC_07.9: Xem lịch sử thách đấu\n(View Challenge History)" as UC_ViewHistory #LightYellow
+  
+  ' Relationships
+  User --> UC_Send
+  User --> UC_ViewList
+  User --> UC_ViewDetails
+  User --> UC_Accept
+  User --> UC_Decline
+  User --> UC_ViewResult
+  User --> UC_ViewHistory
+  
+  ' Include relationships
+  UC_Accept ..> UC_DoChallenge : <<include>>
+  UC_DoChallenge ..> UC_SubmitResult : <<include>>
+  
+  ' Extend relationships
+  UC_ViewList <.. UC_ViewDetails : <<extend>>
+  UC_ViewList <.. UC_ViewResult : <<extend>>
+  
+  ' Note về dependencies
+  note right of UC_Send
+    **Điều kiện tiên quyết:**
+    - User phải có ít nhất 1 bạn bè
+    - Liên quan đến UC_10: 
+      Quản lý bạn bè
+  end note
+  
+  note right of UC_DoChallenge
+    **Bao gồm:**
+    - Quiz Rush
+    - Vocabulary Duel
+    - Lesson Sprint
+    - Speed Challenge
+    - Accuracy Master
+    - Grammar Battle
+  end note
+  
+  note right of UC_ViewResult
+    **Chỉ hiển thị khi:**
+    - Challenge status = 'completed'
+    - Cả 2 người đã nộp kết quả
+  end note
+}
+
+' External system (optional)
+rectangle "Hệ thống liên quan" {
+  usecase "UC_10: Quản lý bạn bè\n(Manage Friends)" as UC_Friends #LightBlue
+  usecase "UC_04: Làm bài quiz\n(Take Quiz)" as UC_Quiz #LightBlue
+  usecase "UC_08: Luyện tập từ vựng\n(Practice Vocabulary)" as UC_Vocab #LightBlue
+}
+
+' Dependencies to external use cases
+UC_Send ..> UC_Friends : <<depends on>>
+UC_DoChallenge ..> UC_Quiz : <<uses>>
+UC_DoChallenge ..> UC_Vocab : <<uses>>
+
+@enduml
+

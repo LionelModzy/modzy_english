@@ -1,0 +1,74 @@
+@startuml AD_03_CompleteLesson - Activity Diagram: Hoàn thành bài học
+
+title Activity Diagram: Hoàn thành bài học (Complete Lesson)
+
+start
+
+:Người dùng xem chi tiết bài học;
+
+:Hiển thị các section của bài học;
+
+:Người dùng phát video/audio bài học;
+
+:Người dùng xem hết nội dung bài học;
+
+:Người dùng nhấn "Hoàn thành bài học";
+
+:Xác nhận hoàn thành;
+
+if (Đã xem đủ nội dung?) then (Không)
+  :Hiển thị cảnh báo "Bạn chưa xem hết nội dung";
+  stop
+else (Có)
+  :Kiểm tra lesson đã hoàn thành chưa;
+
+  if (Đã hoàn thành trước đó?) then (Có)
+    :Hiển thị "Bạn đã hoàn thành bài học này";
+    stop
+  else (Chưa)
+    :Thêm vào learningHistory;
+    note right
+      - lessonId
+      - completedAt
+      - userId
+      - score (nếu có)
+    end note
+
+    :Cập nhật user stats;
+    note right
+      - totalLessonsCompleted++
+      - Cập nhật progressPercentage
+      - Cập nhật currentLevel nếu cần
+    end note
+
+    :Sync progress với stats;
+
+    if (Đủ điều kiện lên level?) then (Có)
+      :Cập nhật currentLevel;
+      :Hiển thị animation lên level;
+      :Thông báo "Chúc mừng! Bạn đã lên level mới";
+    endif
+
+    :Hiển thị thông báo thành công;
+    note right
+      "Chúc mừng! Bạn đã hoàn thành bài học"
+    end note
+
+    :Đánh dấu bài học đã hoàn thành;
+
+    :Cập nhật progress bar;
+
+    if (Người dùng muốn quay về Home?) then (Có)
+      :Quay về HomeScreen;
+      :Refresh progress card;
+      :Hiển thị tiến độ mới;
+    else (Không)
+      :Ở lại màn hình bài học;
+    endif
+  endif
+endif
+
+stop
+
+@enduml
+

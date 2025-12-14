@@ -1,0 +1,101 @@
+@startuml AD_08_CreateChallenge - Activity Diagram: Tạo thách đấu
+
+title Activity Diagram: Tạo thách đấu (Create Challenge)
+
+start
+
+:Người dùng mở màn hình Friend Challenge;
+
+:Lấy danh sách bạn bè từ Firestore;
+
+if (Chưa có bạn bè?) then (Có)
+  :Hiển thị "Bạn chưa có bạn bè";
+  :Hiển thị button "Mời bạn bè";
+  stop
+else (Có)
+  :Hiển thị danh sách bạn bè;
+
+  :Người dùng chọn bạn bè muốn thách đấu;
+
+  :Người dùng nhấn "Tạo thách đấu";
+
+  :Mở challenge template sheet;
+
+  :Hiển thị các loại challenge;
+  note right
+    - Quiz Challenge
+    - Mini Game Challenge
+    - Vocabulary Challenge
+    - Custom Challenge Exercise
+  end note
+
+  :Người dùng chọn loại challenge;
+
+  if (Chọn Quiz Challenge?) then (Có)
+    :Lấy danh sách quiz từ Firestore;
+    :Hiển thị danh sách quiz;
+    :Người dùng chọn quiz muốn thách đấu;
+    :Lưu quizId;
+  elseif (Chọn Mini Game Challenge?) then (Có)
+    :Lấy danh sách mini games từ Firestore;
+    :Hiển thị danh sách games;
+    :Người dùng chọn game muốn thách đấu;
+    :Lưu gameId;
+  else (Chọn Challenge Exercise)
+    :Lấy danh sách challenge exercises từ Firestore;
+    :Hiển thị danh sách exercises;
+    :Người dùng chọn exercise muốn thách đấu;
+    :Lưu exerciseId;
+  endif
+
+  :Người dùng nhập thời hạn (deadline);
+
+  :Validate deadline;
+
+  if (Deadline không hợp lệ?) then (Có)
+    :Hiển thị lỗi "Thời hạn không hợp lệ";
+    stop
+  else (Hợp lệ)
+    :Người dùng nhập message (tùy chọn);
+
+    :Người dùng nhấn "Gửi thách đấu";
+
+    :Kiểm tra bạn bè đã có challenge pending chưa;
+
+    if (Bạn bè đã có challenge pending?) then (Có)
+      :Hiển thị cảnh báo "Bạn bè đã có challenge đang chờ phản hồi";
+      stop
+    else (Chưa)
+      :Tạo challenge document;
+      note right
+        - challengeId
+        - challengerId (userId)
+        - challengeeId (friendId)
+        - challengeType (quiz/game/exercise)
+        - challengeData (quizId/gameId/exerciseId)
+        - deadline
+        - message
+        - status: 'pending'
+        - createdAt
+      end note
+
+      :Gửi notification cho bạn bè;
+
+      :Hiển thị thông báo thành công;
+      note right
+        "Thách đấu đã được gửi!"
+      end note
+
+      :Đóng template sheet;
+
+      :Refresh danh sách challenges;
+
+      :Hiển thị challenge mới trong "Đã gửi";
+    endif
+  endif
+endif
+
+stop
+
+@enduml
+

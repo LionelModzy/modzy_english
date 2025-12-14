@@ -181,6 +181,7 @@ class VocabularyService {
             updatedAt: DateTime.now(),
             isActive: vocabulary.isActive,
             usageCount: vocabulary.usageCount,
+            createdBy: vocabulary.createdBy,
             metadata: vocabulary.metadata,
           );
           
@@ -217,6 +218,7 @@ class VocabularyService {
           updatedAt: DateTime.now(),
           isActive: vocabulary.isActive,
           usageCount: vocabulary.usageCount,
+          createdBy: vocabulary.createdBy,
           metadata: vocabulary.metadata,
         );
         
@@ -307,6 +309,7 @@ class VocabularyService {
           updatedAt: null,
           isActive: true,
           usageCount: 0,
+          createdBy: 'system', // Auto-generated from lesson
           metadata: {
             'auto_generated': true,
           },

@@ -1,0 +1,460 @@
+@startuml Modzy English - Use Case Diagram
+
+!define RECTANGLE class
+
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor<<User>> #E3F2FD
+  BackgroundColor<<Teacher>> #FFF3E0
+  BackgroundColor<<Admin>> #FFEBEE
+  BorderColor #1976D2
+}
+
+title Modzy English - Use Case Diagram
+
+' ============================================
+' ACTORS
+' ============================================
+actor "Người dùng\n(User)" as User
+actor "Giáo viên\n(Teacher)" as Teacher
+actor "Quản trị viên\n(Admin)" as Admin
+
+' ============================================
+' AUTHENTICATION & USER MANAGEMENT
+' ============================================
+package "Xác thực & Quản lý Người dùng" {
+  usecase "Đăng ký tài khoản" as UC_Register
+  usecase "Đăng nhập" as UC_Login
+  usecase "Đăng xuất" as UC_Logout
+  usecase "Quên mật khẩu" as UC_ForgotPassword
+  usecase "Đặt lại mật khẩu" as UC_ResetPassword
+  usecase "Ghi nhớ đăng nhập" as UC_RememberMe
+}
+
+' ============================================
+' USER PROFILE & SETTINGS
+' ============================================
+package "Hồ sơ & Cài đặt" {
+  usecase "Xem hồ sơ cá nhân" as UC_ViewProfile
+  usecase "Chỉnh sửa hồ sơ" as UC_EditProfile
+  usecase "Tải ảnh đại diện" as UC_UploadProfileImage
+  usecase "Xem lịch sử học tập" as UC_ViewLearningHistory
+  usecase "Xem yêu thích" as UC_ViewFavorites
+  usecase "Quản lý cài đặt" as UC_ManageSettings
+  usecase "Xem trợ giúp" as UC_ViewHelp
+}
+
+' ============================================
+' LEARNING CONTENT - LESSONS
+' ============================================
+package "Bài học (Lessons)" {
+  usecase "Duyệt danh sách bài học" as UC_BrowseLessons
+  usecase "Tìm kiếm bài học" as UC_SearchLessons
+  usecase "Lọc bài học" as UC_FilterLessons
+  usecase "Xem chi tiết bài học" as UC_ViewLessonDetail
+  usecase "Phát video bài học" as UC_PlayLessonVideo
+  usecase "Phát audio bài học" as UC_PlayLessonAudio
+  usecase "Hoàn thành bài học" as UC_CompleteLesson
+  usecase "Thêm vào yêu thích" as UC_AddLessonToFavorites
+  usecase "Xem tiến độ bài học" as UC_ViewLessonProgress
+}
+
+' ============================================
+' LEARNING CONTENT - VOCABULARY
+' ============================================
+package "Từ vựng (Vocabulary)" {
+  usecase "Duyệt danh sách từ vựng" as UC_BrowseVocabulary
+  usecase "Tìm kiếm từ vựng" as UC_SearchVocabulary
+  usecase "Lọc từ vựng" as UC_FilterVocabulary
+  usecase "Xem chi tiết từ vựng" as UC_ViewVocabularyDetail
+  usecase "Luyện tập từ vựng" as UC_PracticeVocabulary
+  usecase "Nghe phát âm" as UC_ListenPronunciation
+  usecase "Đánh dấu từ vựng" as UC_BookmarkVocabulary
+  usecase "Xóa đánh dấu" as UC_RemoveBookmark
+  usecase "Thêm vào yêu thích" as UC_AddVocabularyToFavorites
+}
+
+' ============================================
+' LEARNING CONTENT - QUIZ
+' ============================================
+package "Bài kiểm tra (Quiz)" {
+  usecase "Duyệt danh sách quiz" as UC_BrowseQuizzes
+  usecase "Tìm kiếm quiz" as UC_SearchQuizzes
+  usecase "Lọc quiz" as UC_FilterQuizzes
+  usecase "Làm bài quiz" as UC_TakeQuiz
+  usecase "Xem kết quả quiz" as UC_ViewQuizResults
+  usecase "Xem thống kê quiz" as UC_ViewQuizStatistics
+}
+
+' ============================================
+' LEARNING CONTENT - VIDEOS
+' ============================================
+package "Video học tập" {
+  usecase "Xem danh sách video" as UC_BrowseVideos
+  usecase "Phát video" as UC_PlayVideo
+  usecase "Thêm video yêu thích" as UC_AddVideoToFavorites
+}
+
+' ============================================
+' INTERACTIVE LEARNING - MINI GAMES
+' ============================================
+package "Trò chơi Mini (Mini Games)" {
+  usecase "Xem danh sách mini games" as UC_BrowseMiniGames
+  usecase "Chơi Word Match Game" as UC_PlayWordMatch
+  usecase "Chơi Word Scramble Game" as UC_PlayWordScramble
+  usecase "Chơi Word Search Game" as UC_PlayWordSearch
+  usecase "Xem điểm số game" as UC_ViewGameScore
+  usecase "Xem lịch sử chơi game" as UC_ViewGameHistory
+}
+
+' ============================================
+' SOCIAL FEATURES
+' ============================================
+package "Tính năng Xã hội" {
+  usecase "Gửi lời mời kết bạn" as UC_SendFriendRequest
+  usecase "Chấp nhận lời mời" as UC_AcceptFriendRequest
+  usecase "Từ chối lời mời" as UC_RejectFriendRequest
+  usecase "Hủy lời mời đã gửi" as UC_CancelFriendRequest
+  usecase "Xem danh sách bạn bè" as UC_ViewFriendsList
+  usecase "Xóa bạn bè" as UC_RemoveFriend
+  usecase "Tạo thách đấu" as UC_CreateChallenge
+  usecase "Chấp nhận thách đấu" as UC_AcceptChallenge
+  usecase "Từ chối thách đấu" as UC_RejectChallenge
+  usecase "Hoàn thành thách đấu" as UC_CompleteChallenge
+  usecase "Xem kết quả thách đấu" as UC_ViewChallengeResults
+}
+
+' ============================================
+' LEADERBOARD
+' ============================================
+package "Bảng xếp hạng" {
+  usecase "Xem bảng xếp hạng" as UC_ViewLeaderboard
+  usecase "Xem xếp hạng theo điểm" as UC_ViewScoreRanking
+  usecase "Xem xếp hạng theo level" as UC_ViewLevelRanking
+}
+
+' ============================================
+' ADMIN FEATURES
+' ============================================
+package "Tính năng Quản trị" {
+  usecase "Xem bảng điều khiển Admin" as UC_ViewAdminDashboard
+  usecase "Xem thống kê nền tảng" as UC_ViewPlatformStatistics
+  
+  package "Quản lý Người dùng" {
+    usecase "Xem danh sách người dùng" as UC_ViewUsers
+    usecase "Tìm kiếm người dùng" as UC_SearchUsers
+    usecase "Chỉnh sửa thông tin người dùng" as UC_EditUser
+    usecase "Vô hiệu hóa người dùng" as UC_DeactivateUser
+    usecase "Kích hoạt người dùng" as UC_ActivateUser
+    usecase "Thay đổi vai trò người dùng" as UC_ChangeUserRole
+  }
+  
+  package "Quản lý Bài học" {
+    usecase "Tạo bài học" as UC_CreateLesson
+    usecase "Chỉnh sửa bài học" as UC_EditLesson
+    usecase "Xóa bài học" as UC_DeleteLesson
+    usecase "Tải lên media bài học" as UC_UploadLessonMedia
+    usecase "Kích hoạt/Vô hiệu hóa bài học" as UC_ToggleLessonStatus
+  }
+  
+  package "Quản lý Từ vựng" {
+    usecase "Tạo từ vựng" as UC_CreateVocabulary
+    usecase "Chỉnh sửa từ vựng" as UC_EditVocabulary
+    usecase "Xóa từ vựng" as UC_DeleteVocabulary
+    usecase "Tải lên phát âm" as UC_UploadPronunciation
+  }
+  
+  package "Quản lý Quiz" {
+    usecase "Tạo quiz" as UC_CreateQuiz
+    usecase "Chỉnh sửa quiz" as UC_EditQuiz
+    usecase "Xóa quiz" as UC_DeleteQuiz
+    usecase "Xem thống kê quiz" as UC_ViewQuizStats
+  }
+  
+  package "Quản lý Mini Games" {
+    usecase "Tạo mini game" as UC_CreateMiniGame
+    usecase "Chỉnh sửa mini game" as UC_EditMiniGame
+    usecase "Xóa mini game" as UC_DeleteMiniGame
+    usecase "Xem thống kê game" as UC_ViewGameStats
+  }
+  
+  package "Quản lý Challenge Exercises" {
+    usecase "Tạo bài tập challenge" as UC_CreateChallengeExercise
+    usecase "Chỉnh sửa bài tập challenge" as UC_EditChallengeExercise
+    usecase "Xóa bài tập challenge" as UC_DeleteChallengeExercise
+  }
+  
+  package "Phân tích & Thống kê" {
+    usecase "Xem phân tích người dùng" as UC_ViewUserAnalytics
+    usecase "Xem phân tích nội dung" as UC_ViewContentAnalytics
+    usecase "Xem báo cáo tiến độ" as UC_ViewProgressReports
+  }
+  
+  package "Quản lý Media" {
+    usecase "Tải lên media" as UC_UploadMedia
+    usecase "Quản lý thư viện media" as UC_ManageMediaLibrary
+  }
+}
+
+' ============================================
+' TEACHER FEATURES
+' ============================================
+package "Tính năng Giáo viên" {
+  usecase "Xem bảng điều khiển Giáo viên" as UC_ViewTeacherDashboard
+  usecase "Xem thống kê nội dung của mình" as UC_ViewMyContentStats
+  
+  package "Quản lý Bài học (Teacher)" {
+    usecase "Tạo bài học (Teacher)" as UC_CreateLessonTeacher
+    usecase "Chỉnh sửa bài học (Teacher)" as UC_EditLessonTeacher
+  }
+  
+  package "Quản lý Từ vựng (Teacher)" {
+    usecase "Tạo từ vựng (Teacher)" as UC_CreateVocabularyTeacher
+    usecase "Chỉnh sửa từ vựng (Teacher)" as UC_EditVocabularyTeacher
+  }
+  
+  package "Quản lý Quiz (Teacher)" {
+    usecase "Tạo quiz (Teacher)" as UC_CreateQuizTeacher
+    usecase "Chỉnh sửa quiz (Teacher)" as UC_EditQuizTeacher
+  }
+  
+  package "Quản lý Mini Games (Teacher)" {
+    usecase "Tạo mini game (Teacher)" as UC_CreateMiniGameTeacher
+    usecase "Chỉnh sửa mini game (Teacher)" as UC_EditMiniGameTeacher
+  }
+  
+  package "Quản lý Challenge Exercises (Teacher)" {
+    usecase "Tạo bài tập challenge (Teacher)" as UC_CreateChallengeExerciseTeacher
+    usecase "Chỉnh sửa bài tập challenge (Teacher)" as UC_EditChallengeExerciseTeacher
+  }
+}
+
+' ============================================
+' USER RELATIONSHIPS
+' ============================================
+User --> UC_Register
+User --> UC_Login
+User --> UC_Logout
+User --> UC_ForgotPassword
+User --> UC_ResetPassword
+User --> UC_RememberMe
+
+User --> UC_ViewProfile
+User --> UC_EditProfile
+User --> UC_UploadProfileImage
+User --> UC_ViewLearningHistory
+User --> UC_ViewFavorites
+User --> UC_ManageSettings
+User --> UC_ViewHelp
+
+User --> UC_BrowseLessons
+User --> UC_SearchLessons
+User --> UC_FilterLessons
+User --> UC_ViewLessonDetail
+User --> UC_PlayLessonVideo
+User --> UC_PlayLessonAudio
+User --> UC_CompleteLesson
+User --> UC_AddLessonToFavorites
+User --> UC_ViewLessonProgress
+
+User --> UC_BrowseVocabulary
+User --> UC_SearchVocabulary
+User --> UC_FilterVocabulary
+User --> UC_ViewVocabularyDetail
+User --> UC_PracticeVocabulary
+User --> UC_ListenPronunciation
+User --> UC_BookmarkVocabulary
+User --> UC_RemoveBookmark
+User --> UC_AddVocabularyToFavorites
+
+User --> UC_BrowseQuizzes
+User --> UC_SearchQuizzes
+User --> UC_FilterQuizzes
+User --> UC_TakeQuiz
+User --> UC_ViewQuizResults
+User --> UC_ViewQuizStatistics
+
+User --> UC_BrowseVideos
+User --> UC_PlayVideo
+User --> UC_AddVideoToFavorites
+
+User --> UC_BrowseMiniGames
+User --> UC_PlayWordMatch
+User --> UC_PlayWordScramble
+User --> UC_PlayWordSearch
+User --> UC_ViewGameScore
+User --> UC_ViewGameHistory
+
+User --> UC_SendFriendRequest
+User --> UC_AcceptFriendRequest
+User --> UC_RejectFriendRequest
+User --> UC_CancelFriendRequest
+User --> UC_ViewFriendsList
+User --> UC_RemoveFriend
+User --> UC_CreateChallenge
+User --> UC_AcceptChallenge
+User --> UC_RejectChallenge
+User --> UC_CompleteChallenge
+User --> UC_ViewChallengeResults
+
+User --> UC_ViewLeaderboard
+User --> UC_ViewScoreRanking
+User --> UC_ViewLevelRanking
+
+' ============================================
+' TEACHER RELATIONSHIPS
+' ============================================
+Teacher --> UC_Register
+Teacher --> UC_Login
+Teacher --> UC_Logout
+
+Teacher --> UC_ViewProfile
+Teacher --> UC_EditProfile
+Teacher --> UC_UploadProfileImage
+
+Teacher --> UC_ViewTeacherDashboard
+Teacher --> UC_ViewMyContentStats
+
+Teacher --> UC_CreateLessonTeacher
+Teacher --> UC_EditLessonTeacher
+Teacher --> UC_CreateVocabularyTeacher
+Teacher --> UC_EditVocabularyTeacher
+Teacher --> UC_CreateQuizTeacher
+Teacher --> UC_EditQuizTeacher
+Teacher --> UC_CreateMiniGameTeacher
+Teacher --> UC_EditMiniGameTeacher
+Teacher --> UC_CreateChallengeExerciseTeacher
+Teacher --> UC_EditChallengeExerciseTeacher
+
+' Teachers can also use regular user features
+Teacher --> UC_BrowseLessons
+Teacher --> UC_ViewLessonDetail
+Teacher --> UC_BrowseVocabulary
+Teacher --> UC_TakeQuiz
+Teacher --> UC_ViewLeaderboard
+
+' ============================================
+' ADMIN RELATIONSHIPS
+' ============================================
+Admin --> UC_Register
+Admin --> UC_Login
+Admin --> UC_Logout
+
+Admin --> UC_ViewProfile
+Admin --> UC_EditProfile
+
+Admin --> UC_ViewAdminDashboard
+Admin --> UC_ViewPlatformStatistics
+
+Admin --> UC_ViewUsers
+Admin --> UC_SearchUsers
+Admin --> UC_EditUser
+Admin --> UC_DeactivateUser
+Admin --> UC_ActivateUser
+Admin --> UC_ChangeUserRole
+
+Admin --> UC_CreateLesson
+Admin --> UC_EditLesson
+Admin --> UC_DeleteLesson
+Admin --> UC_UploadLessonMedia
+Admin --> UC_ToggleLessonStatus
+
+Admin --> UC_CreateVocabulary
+Admin --> UC_EditVocabulary
+Admin --> UC_DeleteVocabulary
+Admin --> UC_UploadPronunciation
+
+Admin --> UC_CreateQuiz
+Admin --> UC_EditQuiz
+Admin --> UC_DeleteQuiz
+Admin --> UC_ViewQuizStats
+
+Admin --> UC_CreateMiniGame
+Admin --> UC_EditMiniGame
+Admin --> UC_DeleteMiniGame
+Admin --> UC_ViewGameStats
+
+Admin --> UC_CreateChallengeExercise
+Admin --> UC_EditChallengeExercise
+Admin --> UC_DeleteChallengeExercise
+
+Admin --> UC_ViewUserAnalytics
+Admin --> UC_ViewContentAnalytics
+Admin --> UC_ViewProgressReports
+
+Admin --> UC_UploadMedia
+Admin --> UC_ManageMediaLibrary
+
+' Admins can also use regular user features
+Admin --> UC_BrowseLessons
+Admin --> UC_BrowseVocabulary
+Admin --> UC_TakeQuiz
+Admin --> UC_ViewLeaderboard
+
+' ============================================
+' EXTEND RELATIONSHIPS
+' ============================================
+' Lesson-related extends
+UC_CompleteLesson ..> UC_ViewLessonProgress : <<extend>>
+UC_ViewLessonDetail ..> UC_AddLessonToFavorites : <<extend>>
+
+' Quiz-related extends
+UC_TakeQuiz ..> UC_ViewQuizResults : <<extend>>
+UC_TakeQuiz ..> UC_ViewQuizStatistics : <<extend>>
+
+' Vocabulary-related extends
+UC_ViewVocabularyDetail ..> UC_BookmarkVocabulary : <<extend>>
+UC_ViewVocabularyDetail ..> UC_AddVocabularyToFavorites : <<extend>>
+UC_PracticeVocabulary ..> UC_ViewVocabularyDetail : <<extend>>
+
+' Challenge-related extends
+UC_CompleteChallenge ..> UC_ViewChallengeResults : <<extend>>
+UC_CreateChallenge ..> UC_ViewFriendsList : <<extend>>
+
+' Game-related extends
+UC_PlayWordMatch ..> UC_ViewGameScore : <<extend>>
+UC_PlayWordScramble ..> UC_ViewGameScore : <<extend>>
+UC_PlayWordSearch ..> UC_ViewGameScore : <<extend>>
+UC_PlayWordMatch ..> UC_ViewGameHistory : <<extend>>
+UC_PlayWordScramble ..> UC_ViewGameHistory : <<extend>>
+UC_PlayWordSearch ..> UC_ViewGameHistory : <<extend>>
+
+' Profile-related extends
+UC_EditProfile ..> UC_UploadProfileImage : <<extend>>
+
+' ============================================
+' INCLUDE RELATIONSHIPS
+' ============================================
+' Lesson-related includes
+UC_ViewLessonDetail ..> UC_PlayLessonVideo : <<include>>
+UC_ViewLessonDetail ..> UC_PlayLessonAudio : <<include>>
+UC_CompleteLesson ..> UC_ViewLessonDetail : <<include>>
+
+' Vocabulary-related includes
+UC_PracticeVocabulary ..> UC_ListenPronunciation : <<include>>
+UC_PracticeVocabulary ..> UC_ViewVocabularyDetail : <<include>>
+
+' Quiz-related includes
+UC_TakeQuiz ..> UC_BrowseQuizzes : <<include>>
+
+' Challenge-related includes
+UC_AcceptChallenge ..> UC_TakeQuiz : <<include>>
+UC_CreateChallenge ..> UC_ViewFriendsList : <<include>>
+
+' Friend-related includes
+UC_SendFriendRequest ..> UC_ViewFriendsList : <<include>>
+UC_AcceptFriendRequest ..> UC_ViewFriendsList : <<include>>
+UC_CancelFriendRequest ..> UC_ViewFriendsList : <<include>>
+
+' Admin/Teacher content management includes
+UC_CreateLesson ..> UC_UploadLessonMedia : <<include>>
+UC_CreateVocabulary ..> UC_UploadPronunciation : <<include>>
+UC_EditLesson ..> UC_UploadLessonMedia : <<include>>
+UC_EditVocabulary ..> UC_UploadPronunciation : <<include>>
+
+' Teacher-specific includes
+UC_CreateLessonTeacher ..> UC_UploadLessonMedia : <<include>>
+UC_CreateVocabularyTeacher ..> UC_UploadPronunciation : <<include>>
+
+@enduml
+

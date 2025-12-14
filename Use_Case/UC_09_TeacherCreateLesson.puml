@@ -1,0 +1,183 @@
+@startuml UC_09_TeacherCreateLesson - Giáo viên tạo bài học
+
+title Use Case: Giáo viên tạo bài học (Teacher Create Lesson)
+
+actor "Giáo viên\n(Teacher)" as Teacher
+participant "Teacher Dashboard" as TeacherDashboard
+participant "Lesson Management Screen" as LessonMgmtScreen
+participant "Create Lesson Screen" as CreateLessonScreen
+participant "Lesson Service" as LessonService
+participant "Cloudinary Service" as CloudinaryService
+participant "Firebase Storage" as FirebaseStorage
+participant "Firestore" as Firestore
+
+== Main Flow ==
+
+Teacher -> TeacherDashboard: 1. Mở Teacher Dashboard
+activate TeacherDashboard
+
+Teacher -> TeacherDashboard: 2. Nhấn "Quản lý Bài học"
+TeacherDashboard -> LessonMgmtScreen: 3. Mở màn hình quản lý bài học
+activate LessonMgmtScreen
+
+Teacher -> LessonMgmtScreen: 4. Nhấn "Tạo bài học mới"
+LessonMgmtScreen -> CreateLessonScreen: 5. Mở màn hình tạo bài học
+activate CreateLessonScreen
+
+CreateLessonScreen -> CreateLessonScreen: 6. Hiển thị form tạo bài học
+note right: - Title (bắt buộc)\n- Description\n- Category\n- Difficulty Level\n- Objectives\n- Content sections
+
+Teacher -> CreateLessonScreen: 7. Nhập thông tin cơ bản
+note right: - Title: "Present Simple Tense"\n- Description: "Học về thì hiện tại đơn"\n- Category: "Grammar"\n- Difficulty: "Beginner"
+
+Teacher -> CreateLessonScreen: 8. Thêm mục tiêu học tập
+CreateLessonScreen -> CreateLessonScreen: 9. Hiển thị danh sách objectives
+Teacher -> CreateLessonScreen: 10. Nhập từng mục tiêu
+note right: - "Hiểu cách sử dụng Present Simple"\n- "Biết cách chia động từ"\n- "Làm được bài tập"
+
+Teacher -> CreateLessonScreen: 11. Thêm sections cho bài học
+loop Cho mỗi section
+    Teacher -> CreateLessonScreen: 12. Thêm section mới
+    CreateLessonScreen -> CreateLessonScreen: 13. Hiển thị form section
+    note right: - Section title\n- Section type (video/audio/text)\n- Content\n- Order
+    
+    alt Section type: Video
+        Teacher -> CreateLessonScreen: 14. Upload video file
+        CreateLessonScreen -> CloudinaryService: 15. uploadVideo(file)
+        activate CloudinaryService
+        CloudinaryService -> CloudinaryService: 16. Upload video lên Cloudinary
+        CloudinaryService --> CreateLessonScreen: 17. Video URL
+        deactivate CloudinaryService
+        CreateLessonScreen -> CreateLessonScreen: 18. Lưu video URL
+    else Section type: Audio
+        Teacher -> CreateLessonScreen: 19. Upload audio file
+        CreateLessonScreen -> CloudinaryService: 20. uploadAudio(file)
+        activate CloudinaryService
+        CloudinaryService -> CloudinaryService: 21. Upload audio lên Cloudinary
+        CloudinaryService --> CreateLessonScreen: 22. Audio URL
+        deactivate CloudinaryService
+        CreateLessonScreen -> CreateLessonScreen: 23. Lưu audio URL
+    else Section type: Text
+        Teacher -> CreateLessonScreen: 24. Nhập nội dung text
+        CreateLessonScreen -> CreateLessonScreen: 25. Lưu text content
+    end
+    
+    Teacher -> CreateLessonScreen: 26. Lưu section
+end
+
+Teacher -> CreateLessonScreen: 27. Thêm từ vựng liên quan
+CreateLessonScreen -> CreateLessonScreen: 28. Hiển thị danh sách từ vựng có sẵn
+Teacher -> CreateLessonScreen: 29. Chọn từ vựng liên quan
+note right: Có thể chọn nhiều từ vựng
+
+Teacher -> CreateLessonScreen: 30. Nhấn "Lưu bài học"
+CreateLessonScreen -> CreateLessonScreen: 31. Validate form
+note right: - Title không rỗng\n- Có ít nhất 1 section\n- Category và Difficulty đã chọn
+
+alt Form hợp lệ
+    CreateLessonScreen -> LessonService: 32. createLesson(lessonData)
+    activate LessonService
+    
+    LessonService -> Firestore: 33. Tạo lesson document
+    activate Firestore
+    note right: - lessonId\n- title\n- description\n- category\n- difficultyLevel\n- objectives\n- sections[]\n- vocabularyIds[]\n- createdBy (teacherId)\n- createdAt\n- isActive: true
+    Firestore --> LessonService: 34. LessonModel
+    deactivate Firestore
+    
+    LessonService -> Firestore: 35. Cập nhật teacher statistics
+    activate Firestore
+    note right: - totalLessonsCreated++\n- Cập nhật lastContentCreatedAt
+    Firestore --> LessonService: 36. Success
+    deactivate Firestore
+    
+    LessonService --> CreateLessonScreen: 37. Success + LessonModel
+    deactivate LessonService
+    
+    CreateLessonScreen -> CreateLessonScreen: 38. Hiển thị thông báo thành công
+    note right: "Bài học đã được tạo thành công!"
+    
+    CreateLessonScreen -> LessonMgmtScreen: 39. Quay về màn hình quản lý
+    deactivate CreateLessonScreen
+    
+    LessonMgmtScreen -> LessonService: 40. refreshLessons()
+    activate LessonService
+    LessonService -> Firestore: 41. Lấy danh sách lessons của teacher
+    activate Firestore
+    Firestore --> LessonService: 42. List<LessonModel>
+    deactivate Firestore
+    LessonService --> LessonMgmtScreen: 43. Updated list
+    deactivate LessonService
+    
+    LessonMgmtScreen -> LessonMgmtScreen: 44. Hiển thị bài học mới trong danh sách
+    LessonMgmtScreen --> Teacher: 45. Cập nhật UI
+else Form không hợp lệ
+    CreateLessonScreen --> Teacher: 31. Hiển thị lỗi validation
+    note right: - "Vui lòng nhập tiêu đề"\n- "Vui lòng thêm ít nhất 1 section"
+end
+
+deactivate LessonMgmtScreen
+deactivate TeacherDashboard
+
+== Alternative Flows ==
+
+== A1: Upload media thất bại ==
+CloudinaryService --> CreateLessonScreen: Error: Upload failed
+CreateLessonScreen --> Teacher: Hiển thị lỗi "Không thể tải lên file"
+CreateLessonScreen -> CreateLessonScreen: Cho phép thử lại upload
+
+== A2: Hủy tạo bài học ==
+Teacher -> CreateLessonScreen: Nhấn "Hủy"
+CreateLessonScreen -> CreateLessonScreen: Xác nhận hủy
+alt Xác nhận hủy
+    CreateLessonScreen -> CreateLessonScreen: Xóa dữ liệu đã nhập
+    CreateLessonScreen -> LessonMgmtScreen: Quay về màn hình quản lý
+else Không hủy
+    CreateLessonScreen -> CreateLessonScreen: Tiếp tục chỉnh sửa
+end
+
+== A3: Preview bài học ==
+Teacher -> CreateLessonScreen: Nhấn "Xem trước"
+CreateLessonScreen -> CreateLessonScreen: Mở preview mode
+note right: Hiển thị bài học như người dùng sẽ thấy
+Teacher -> CreateLessonScreen: Xem preview
+Teacher -> CreateLessonScreen: Đóng preview và tiếp tục chỉnh sửa
+
+== A4: Lưu nháp ==
+Teacher -> CreateLessonScreen: Nhấn "Lưu nháp"
+CreateLessonScreen -> LessonService: saveDraft(lessonData)
+LessonService -> Firestore: Lưu vào drafts collection
+Firestore --> LessonService: Success
+LessonService --> CreateLessonScreen: Success
+CreateLessonScreen -> CreateLessonScreen: Thông báo "Đã lưu nháp"
+note right: Bài học được lưu với status = 'draft'
+
+== A5: Thêm quiz vào bài học ==
+Teacher -> CreateLessonScreen: Nhấn "Thêm Quiz"
+CreateLessonScreen -> CreateLessonScreen: Mở dialog chọn quiz
+note right: - Tạo quiz mới\n- Chọn quiz có sẵn
+alt Tạo quiz mới
+    CreateLessonScreen -> CreateLessonScreen: Mở màn hình tạo quiz
+    note right: (Use case riêng: Create Quiz)
+else Chọn quiz có sẵn
+    CreateLessonScreen -> LessonService: getAvailableQuizzes()
+    LessonService -> Firestore: Lấy danh sách quiz
+    Firestore --> LessonService: List quizzes
+    LessonService --> CreateLessonScreen: List quizzes
+    CreateLessonScreen -> CreateLessonScreen: Hiển thị danh sách
+    Teacher -> CreateLessonScreen: Chọn quiz
+    CreateLessonScreen -> CreateLessonScreen: Liên kết quiz với lesson
+end
+
+== A6: Chỉnh sửa bài học sau khi tạo ==
+LessonMgmtScreen -> LessonMgmtScreen: Hiển thị bài học đã tạo
+Teacher -> LessonMgmtScreen: Nhấn "Chỉnh sửa" trên bài học
+LessonMgmtScreen -> CreateLessonScreen: Mở màn hình chỉnh sửa với lessonId
+CreateLessonScreen -> LessonService: getLessonById(lessonId)
+LessonService -> Firestore: Lấy thông tin lesson
+Firestore --> LessonService: LessonModel
+LessonService --> CreateLessonScreen: LessonModel
+CreateLessonScreen -> CreateLessonScreen: Load dữ liệu vào form
+note right: (Tiếp tục flow chỉnh sửa tương tự)
+
+@enduml
+

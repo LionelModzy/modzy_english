@@ -1,0 +1,82 @@
+@startuml AD_07_SendFriendRequest - Activity Diagram: Gửi lời mời kết bạn
+
+title Activity Diagram: Gửi lời mời kết bạn (Send Friend Request)
+
+start
+
+:Người dùng mở màn hình Friend Challenge;
+
+:Mở tab "Kết bạn";
+
+:Hiển thị form tìm kiếm bạn bè;
+
+:Người dùng nhập email hoặc tên người dùng;
+
+:Tìm kiếm users trong Firestore;
+
+if (Tìm thấy người dùng?) then (Không)
+  :Hiển thị "Không tìm thấy người dùng";
+  stop
+else (Có)
+  :Hiển thị kết quả tìm kiếm;
+  note right
+    - Tên
+    - Email
+    - Level
+    - Progress
+    - Button "Gửi lời mời"
+  end note
+
+  :Người dùng chọn người dùng muốn kết bạn;
+
+  :Người dùng nhấn "Gửi lời mời kết bạn";
+
+  :Kiểm tra senderId != receiverId;
+
+  if (Tự gửi request cho chính mình?) then (Có)
+    :Hiển thị lỗi "Bạn không thể kết bạn với chính mình";
+    stop
+  else (Không)
+    :Kiểm tra đã là bạn chưa;
+
+    if (Đã là bạn bè?) then (Có)
+      :Hiển thị "Bạn đã là bạn bè với người này";
+      stop
+    else (Chưa)
+      :Kiểm tra đã có request pending chưa;
+
+      if (Đã có request pending?) then (Có)
+        :Hiển thị "Bạn đã gửi lời mời cho người này";
+        stop
+      else (Chưa)
+        :Tạo friend request document;
+        note right
+          - requestId
+          - senderId (userId)
+          - receiverId (targetUserId)
+          - status: 'pending'
+          - createdAt
+          - message (optional)
+        end note
+
+        :Gửi notification cho target user;
+
+        :Hiển thị thông báo thành công;
+        note right
+          "Lời mời kết bạn đã được gửi!"
+        end note
+
+        :Cập nhật UI;
+        note right
+          - Button chuyển thành "Đã gửi"
+          - Hiển thị trong tab "Đã gửi"
+        end note
+      endif
+    endif
+  endif
+endif
+
+stop
+
+@enduml
+

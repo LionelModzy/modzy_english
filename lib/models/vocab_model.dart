@@ -19,6 +19,7 @@ class VocabularyModel {
   final DateTime? updatedAt;
   final bool isActive;
   final int usageCount;
+  final String createdBy; // User ID who created this vocabulary
   final Map<String, dynamic> metadata;
 
   VocabularyModel({
@@ -40,6 +41,7 @@ class VocabularyModel {
     this.updatedAt,
     required this.isActive,
     required this.usageCount,
+    required this.createdBy,
     required this.metadata,
   });
 
@@ -68,6 +70,7 @@ class VocabularyModel {
           : null,
       isActive: data['isActive'] ?? true,
       usageCount: data['usageCount'] ?? 0,
+      createdBy: data['createdBy'] ?? '',
       metadata: Map<String, dynamic>.from(data['metadata'] ?? {}),
     );
   }
@@ -99,6 +102,7 @@ class VocabularyModel {
           : null,
       isActive: map['isActive'] ?? true,
       usageCount: map['usageCount'] ?? 0,
+      createdBy: map['createdBy'] ?? '',
       metadata: Map<String, dynamic>.from(map['metadata'] ?? {}),
     );
   }
@@ -124,6 +128,7 @@ class VocabularyModel {
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
       'isActive': isActive,
       'usageCount': usageCount,
+      'createdBy': createdBy,
       'metadata': metadata,
     };
   }
@@ -148,6 +153,7 @@ class VocabularyModel {
     DateTime? updatedAt,
     bool? isActive,
     int? usageCount,
+    String? createdBy,
     Map<String, dynamic>? metadata,
   }) {
     return VocabularyModel(
@@ -169,6 +175,7 @@ class VocabularyModel {
       updatedAt: updatedAt ?? this.updatedAt,
       isActive: isActive ?? this.isActive,
       usageCount: usageCount ?? this.usageCount,
+      createdBy: createdBy ?? this.createdBy,
       metadata: metadata ?? this.metadata,
     );
   }

@@ -1,0 +1,181 @@
+@startuml SD_LuyenTapTuVung - Sequence Diagram: Luyện tập từ vựng
+
+title Sequence Diagram: Luyện tập từ vựng
+
+actor "Học viên" as Student
+participant "Giao diện danh sách từ vựng" as VocabScreen
+participant "Giao diện luyện tập" as PracticeScreen
+participant "Phiên luyện tập" as PracticeSession
+participant "Dịch vụ từ vựng" as VocabService
+participant "Dịch vụ tiến độ học tập" as ProgressService
+participant "Dịch vụ đánh dấu" as BookmarkService
+participant "Cơ sở dữ liệu (Firestore)" as DB
+participant "Trình phát âm thanh" as AudioPlayer
+
+== Luồng chính ==
+
+Student -> VocabScreen : 1. Mở danh sách từ vựng
+activate VocabScreen
+
+VocabScreen -> DB : 2. Lấy danh sách từ vựng
+activate DB
+DB --> VocabScreen : 3. Danh sách từ vựng
+deactivate DB
+
+VocabScreen --> Student : 4. Hiển thị danh sách từ vựng
+
+Student -> VocabScreen : 5. Chọn "Luyện tập từ vựng"
+VocabScreen -> PracticeScreen : 6. Chuyển đến màn hình luyện tập
+activate PracticeScreen
+deactivate VocabScreen
+
+PracticeScreen -> VocabService : 7. Lấy danh sách từ vựng\n(theo danh mục hoặc tất cả)
+activate VocabService
+
+alt Có lọc theo danh mục
+    VocabService -> DB : 8. Truy vấn từ vựng theo danh mục
+    activate DB
+    DB --> VocabService : 9. Danh sách từ vựng
+    deactivate DB
+else Không có lọc
+    VocabService -> DB : 8. Lấy tất cả từ vựng
+    activate DB
+    DB --> VocabService : 9. Danh sách từ vựng
+    deactivate DB
+end
+
+VocabService --> PracticeScreen : 10. Danh sách từ vựng
+deactivate VocabService
+
+PracticeScreen -> PracticeScreen : 11. Tạo bộ luyện tập (20 từ ngẫu nhiên)
+note right: Xáo trộn và chọn 20 từ
+
+PracticeScreen --> Student : 12. Hiển thị chọn chế độ luyện tập
+note right: - Flashcard\n- Trắc nghiệm\n- Điền từ\n- Nghe và chọn
+
+Student -> PracticeScreen : 13. Chọn chế độ luyện tập
+PracticeScreen -> PracticeSession : 14. Khởi tạo phiên luyện tập\n(với từ vựng và chế độ)
+activate PracticeSession
+deactivate PracticeScreen
+
+PracticeSession -> PracticeSession : 15. Khởi tạo session
+note right: - currentIndex = 0\n- correctAnswers = 0\n- Khởi tạo nội dung bài tập
+
+PracticeSession --> Student : 16. Hiển thị từ vựng đầu tiên
+
+loop Cho mỗi từ vựng trong bộ luyện tập
+    Student -> PracticeSession : 17. Xem từ vựng
+    
+    alt Chế độ: Flashcard
+        PracticeSession --> Student : 18. Hiển thị flashcard với từ tiếng Anh
+        Student -> PracticeSession : 19. Nhấn để xem nghĩa
+        PracticeSession --> Student : 20. Hiển thị nghĩa tiếng Việt
+        Student -> PracticeSession : 21. Đánh dấu đúng/sai
+        PracticeSession -> PracticeSession : 22. Cập nhật correctAnswers
+        
+    else Chế độ: Trắc nghiệm
+        PracticeSession -> PracticeSession : 23. Tạo 4 lựa chọn\n(1 đúng + 3 sai)
+        PracticeSession --> Student : 24. Hiển thị câu hỏi và 4 lựa chọn
+        Student -> PracticeSession : 25. Chọn đáp án
+        PracticeSession -> PracticeSession : 26. Kiểm tra đáp án
+        
+        alt Đáp án đúng
+            PracticeSession -> PracticeSession : 27. correctAnswers++
+            PracticeSession --> Student : 28. Hiển thị "Đúng!" với animation
+        else Đáp án sai
+            PracticeSession --> Student : 28. Hiển thị "Sai!" và đáp án đúng
+        end
+        
+    else Chế độ: Điền từ
+        PracticeSession --> Student : 24. Hiển thị nghĩa và ô nhập
+        Student -> PracticeSession : 25. Nhập từ tiếng Anh
+        PracticeSession -> PracticeSession : 26. So sánh với từ đúng\n(không phân biệt hoa thường)
+        
+        alt Từ đúng
+            PracticeSession -> PracticeSession : 27. correctAnswers++
+            PracticeSession --> Student : 28. Hiển thị "Đúng!" với animation
+        else Từ sai
+            PracticeSession --> Student : 28. Hiển thị "Sai!" và từ đúng
+        end
+        
+    else Chế độ: Nghe và chọn
+        PracticeSession -> AudioPlayer : 24. Phát âm từ vựng
+        activate AudioPlayer
+        AudioPlayer --> Student : 25. Phát âm từ vựng
+        deactivate AudioPlayer
+        PracticeSession --> Student : 26. Hiển thị 4 lựa chọn nghĩa
+        Student -> PracticeSession : 27. Chọn nghĩa phù hợp
+        PracticeSession -> PracticeSession : 28. Kiểm tra đáp án
+        
+        alt Đáp án đúng
+            PracticeSession -> PracticeSession : 29. correctAnswers++
+            PracticeSession --> Student : 30. Hiển thị "Đúng!"
+        else Đáp án sai
+            PracticeSession --> Student : 30. Hiển thị "Sai!" và đáp án đúng
+        end
+    end
+    
+    Student -> PracticeSession : 31. Nhấn "Câu tiếp theo"
+    PracticeSession -> PracticeSession : 32. currentIndex++
+    
+    alt Còn từ vựng
+        PracticeSession --> Student : 33. Hiển thị từ vựng tiếp theo
+    else Hết từ vựng
+        PracticeSession -> PracticeSession : 34. Chuyển đến màn hình kết quả
+    end
+end
+
+PracticeSession -> PracticeSession : 35. Tính toán kết quả
+note right: - accuracy = (correctAnswers / total) * 100\n- timeSpent
+
+PracticeSession -> ProgressService : 36. Lưu tiến độ luyện tập chung\n(activityType: 'vocabulary_practice')
+activate ProgressService
+ProgressService -> DB : 37. Lưu vào general_progress
+activate DB
+note right: users/{userId}/general_progress/{progressId}\n  - activityType: 'vocabulary_practice'\n  - mode\n  - vocabulariesCount\n  - correctAnswers\n  - accuracy\n  - timeSpent
+DB --> ProgressService : 38. Thành công
+deactivate DB
+ProgressService --> PracticeSession : 39. Thành công
+deactivate ProgressService
+
+loop Cho mỗi từ vựng đã luyện tập
+    PracticeSession -> ProgressService : 40. Lưu tiến độ từ vựng\n(vocabularyId, correctAnswers, totalQuestions)
+    activate ProgressService
+    ProgressService -> DB : 41. Lưu vocabulary mastery
+    activate DB
+    note right: users/{userId}/vocabulary_progress/{vocabId}\n  - vocabularyId\n  - correctAnswers\n  - totalQuestions\n  - practiceType\n  - timeSpent
+    DB --> ProgressService : 42. Thành công
+    deactivate DB
+    ProgressService --> PracticeSession : 43. Thành công
+    deactivate ProgressService
+end
+
+PracticeSession -> PracticeSession : 44. Hiển thị màn hình kết quả
+PracticeSession --> Student : 45. Hiển thị kết quả luyện tập
+note right: - Tổng số từ: X\n- Số câu đúng: Y\n- Độ chính xác: Z%\n- Thời gian: T phút
+
+alt Học viên muốn đánh dấu từ vựng
+    Student -> PracticeSession : 46. Nhấn "Đánh dấu"
+    PracticeSession -> BookmarkService : 47. Thêm vào bookmark
+    activate BookmarkService
+    BookmarkService -> DB : 48. Lưu vào bookmarks collection
+    activate DB
+    DB --> BookmarkService : 49. Thành công
+    deactivate DB
+    BookmarkService --> PracticeSession : 50. Thành công
+    deactivate BookmarkService
+    PracticeSession --> Student : 51. Hiển thị "Đã thêm vào bookmark"
+end
+
+alt Học viên muốn luyện tập lại
+    Student -> PracticeSession : 46. Nhấn "Luyện tập lại"
+    PracticeSession -> PracticeSession : 47. Reset session state
+    PracticeSession --> Student : 48. Hiển thị từ vựng đầu tiên
+else Học viên hoàn thành
+    Student -> PracticeSession : 46. Nhấn "Hoàn thành"
+    PracticeSession -> VocabScreen : 47. Quay về danh sách từ vựng
+    deactivate PracticeSession
+end
+
+@enduml
+

@@ -71,6 +71,9 @@ dependencies:
   cloudinary_url_gen: ^1.0.0
   cloudinary_api: ^1.0.0
   flutter_dotenv: ^5.2.1
+  
+  # Charts
+  fl_chart: ^0.69.0
 
 
   

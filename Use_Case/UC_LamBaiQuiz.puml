@@ -1,0 +1,45 @@
+@startuml UC_LamBaiQuiz - Use Case Diagram: Làm bài Quiz & xem kết quả
+
+title Use Case Diagram: Làm bài Quiz & xem kết quả
+
+left to right direction
+
+actor "Học viên" as Student
+
+rectangle "Làm bài Quiz" {
+  usecase "Xem danh sách Quiz" as UC_ViewList
+  usecase "Tìm kiếm Quiz" as UC_Search
+  usecase "Lọc Quiz" as UC_Filter
+  usecase "Xem chi tiết Quiz" as UC_ViewDetail
+  usecase "Bắt đầu làm Quiz" as UC_Start
+  usecase "Trả lời câu hỏi" as UC_Answer
+  usecase "Nộp bài Quiz" as UC_Submit
+  usecase "Tính điểm số" as UC_Grade
+  usecase "Xem kết quả Quiz" as UC_ViewResults
+  usecase "Xem chi tiết đáp án" as UC_ViewAnswerDetails
+  usecase "Làm lại Quiz" as UC_Retake
+  usecase "Lưu kết quả Quiz" as UC_SaveResult
+  usecase "Cập nhật thống kê" as UC_UpdateStats
+}
+
+Student --> UC_ViewList
+Student --> UC_Search
+Student --> UC_Filter
+Student --> UC_ViewDetail
+Student --> UC_Start
+Student --> UC_Answer
+Student --> UC_Submit
+Student --> UC_ViewResults
+Student --> UC_ViewAnswerDetails
+Student --> UC_Retake
+
+UC_Start .> UC_ViewDetail : <<include>>
+UC_Answer .> UC_Start : <<include>>
+UC_Submit .> UC_Answer : <<include>>
+UC_ViewResults .> UC_Grade : <<include>>
+UC_ViewResults .> UC_SaveResult : <<include>>
+UC_ViewResults .> UC_UpdateStats : <<include>>
+UC_ViewAnswerDetails .> UC_ViewResults : <<extend>>
+
+@enduml
+

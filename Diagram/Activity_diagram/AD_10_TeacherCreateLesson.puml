@@ -1,0 +1,116 @@
+@startuml AD_10_TeacherCreateLesson - Activity Diagram: Giáo viên tạo bài học
+
+title Activity Diagram: Giáo viên tạo bài học (Teacher Create Lesson)
+
+start
+
+:Giáo viên mở Teacher Dashboard;
+
+:Giáo viên nhấn "Quản lý Bài học";
+
+:Giáo viên nhấn "Tạo bài học mới";
+
+:Hiển thị form tạo bài học;
+note right
+  - Title (bắt buộc)
+  - Description
+  - Category
+  - Difficulty Level
+  - Objectives
+  - Content sections
+end note
+
+:Giáo viên nhập thông tin cơ bản;
+note right
+  - Title: "Present Simple Tense"
+  - Description: "Học về thì hiện tại đơn"
+  - Category: "Grammar"
+  - Difficulty: "Beginner"
+end note
+
+:Giáo viên thêm mục tiêu học tập;
+
+repeat
+  :Thêm section mới;
+  :Hiển thị form section;
+  note right
+    - Section title
+    - Section type (video/audio/text)
+    - Content
+    - Order
+  end note
+
+  if (Section type: Video?) then (Có)
+    :Upload video file;
+    :Upload video lên Cloudinary;
+    :Lưu video URL;
+  elseif (Section type: Audio?) then (Có)
+    :Upload audio file;
+    :Upload audio lên Cloudinary;
+    :Lưu audio URL;
+  else (Section type: Text)
+    :Nhập nội dung text;
+    :Lưu text content;
+  endif
+
+  :Lưu section;
+
+repeat while (Còn section cần thêm?) is (Có)
+-> Không còn section;
+
+:Hiển thị danh sách từ vựng có sẵn;
+
+:Giáo viên chọn từ vựng liên quan;
+note right
+  Có thể chọn nhiều từ vựng
+end note
+
+:Giáo viên nhấn "Lưu bài học";
+
+:Validate form;
+
+if (Form hợp lệ?) then (Không)
+  :Hiển thị lỗi validation;
+  note right
+    - "Vui lòng nhập tiêu đề"
+    - "Vui lòng thêm ít nhất 1 section"
+  end note
+  stop
+else (Có)
+  :Tạo lesson document trong Firestore;
+  note right
+    - lessonId
+    - title
+    - description
+    - category
+    - difficultyLevel
+    - objectives
+    - sections[]
+    - vocabularyIds[]
+    - createdBy (teacherId)
+    - createdAt
+    - isActive: true
+  end note
+
+  :Cập nhật teacher statistics;
+  note right
+    - totalLessonsCreated++
+    - Cập nhật lastContentCreatedAt
+  end note
+
+  :Hiển thị thông báo thành công;
+  note right
+    "Bài học đã được tạo thành công!"
+  end note
+
+  :Quay về màn hình quản lý;
+
+  :Refresh danh sách lessons;
+
+  :Hiển thị bài học mới trong danh sách;
+endif
+
+stop
+
+@enduml
+

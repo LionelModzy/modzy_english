@@ -1,0 +1,47 @@
+@startuml UC_LuyenTapTuVung - Use Case Diagram: Luyện tập từ vựng
+
+title Use Case Diagram: Luyện tập từ vựng
+
+left to right direction
+
+actor "Học viên" as Student
+
+rectangle "Luyện tập từ vựng" {
+  usecase "Xem danh sách từ vựng" as UC_ViewList
+  usecase "Chọn từ vựng để luyện tập" as UC_Select
+  usecase "Chọn chế độ luyện tập" as UC_ChooseMode
+  usecase "Luyện tập Flashcard" as UC_Flashcard
+  usecase "Luyện tập Trắc nghiệm" as UC_MultipleChoice
+  usecase "Luyện tập Điền từ" as UC_Typing
+  usecase "Luyện tập Nghe và chọn" as UC_Listening
+  usecase "Nghe phát âm từ vựng" as UC_Pronunciation
+  usecase "Kiểm tra đáp án" as UC_CheckAnswer
+  usecase "Xem kết quả luyện tập" as UC_ViewResults
+  usecase "Cập nhật tiến độ học tập" as UC_UpdateProgress
+  usecase "Đánh dấu từ vựng" as UC_Bookmark
+  usecase "Luyện tập lại" as UC_Retry
+}
+
+Student --> UC_ViewList
+Student --> UC_Select
+Student --> UC_ChooseMode
+Student --> UC_Flashcard
+Student --> UC_MultipleChoice
+Student --> UC_Typing
+Student --> UC_Listening
+Student --> UC_Pronunciation
+Student --> UC_ViewResults
+Student --> UC_Bookmark
+Student --> UC_Retry
+
+UC_Select .> UC_ViewList : <<include>>
+UC_ChooseMode .> UC_Select : <<include>>
+UC_Flashcard .> UC_Pronunciation : <<include>>
+UC_MultipleChoice .> UC_CheckAnswer : <<include>>
+UC_Typing .> UC_CheckAnswer : <<include>>
+UC_Listening .> UC_Pronunciation : <<include>>
+UC_Listening .> UC_CheckAnswer : <<include>>
+UC_ViewResults .> UC_UpdateProgress : <<extend>>
+
+@enduml
+

@@ -1,0 +1,210 @@
+@startuml SD_06_PlayMiniGame - Sequence Diagram: Chơi mini game
+
+title Sequence Diagram: Chơi mini game (Play Mini Game)
+
+actor "Người dùng\n(User)" as User
+participant "Mini Games Menu Screen" as MenuScreen
+participant "Game Screen\n(Word Match/Scramble/Search)" as GameScreen
+participant "Mini Game Service" as GameService
+participant "Vocabulary Service" as VocabService
+participant "Firestore" as Firestore
+
+== Main Flow ==
+
+User -> MenuScreen: 1. Mở màn hình Mini Games
+activate MenuScreen
+
+MenuScreen -> GameService: 2. getAllGames()
+activate GameService
+GameService -> Firestore: 3. Lấy danh sách games
+activate Firestore
+Firestore --> GameService: 4. List<MiniGameModel>
+deactivate Firestore
+GameService --> MenuScreen: 5. List games
+deactivate GameService
+
+MenuScreen --> User: 6. Hiển thị danh sách mini games
+note right: - Word Match Game\n- Word Scramble Game\n- Word Search Game
+
+User -> MenuScreen: 7. Chọn game muốn chơi
+MenuScreen -> GameScreen: 8. Navigate to GameScreen với gameId
+activate GameScreen
+deactivate MenuScreen
+
+GameScreen -> GameService: 9. getGameById(gameId)
+activate GameService
+GameService -> Firestore: 10. Lấy chi tiết game
+activate Firestore
+Firestore --> GameService: 11. MiniGameModel
+deactivate Firestore
+GameService --> GameScreen: 12. MiniGameModel
+deactivate GameService
+
+GameScreen -> VocabService: 13. getVocabulariesByIds(vocabularyIds)
+activate VocabService
+VocabService -> Firestore: 14. Lấy từ vựng từ vocabularyIds
+activate Firestore
+Firestore --> VocabService: 15. List<VocabularyModel>
+deactivate Firestore
+VocabService --> GameScreen: 16. List vocabularies
+deactivate VocabService
+
+GameScreen -> GameScreen: 17. Khởi tạo game state
+note right: - Initialize game board\n- Set score = 0\n- Set timer\n- Set currentWordIndex = 0\n- Set hintsUsed = 0
+
+GameScreen --> User: 18. Hiển thị màn hình game
+
+alt Game Type: Word Match
+    GameScreen -> GameScreen: 19. Tạo card pairs
+    note right: 6 pairs (12 cards)\nEnglish word + Vietnamese meaning
+    
+    GameScreen --> User: 20. Hiển thị 12 cards úp
+    
+    loop Cho đến khi match hết các cặp
+        User -> GameScreen: 21. Chọn card thứ nhất
+        GameScreen -> GameScreen: 22. Lật card
+        GameScreen --> User: 23. Hiển thị card đã lật
+        
+        User -> GameScreen: 24. Chọn card thứ hai
+        GameScreen -> GameScreen: 25. Lật card
+        
+        alt 2 cards khớp
+            GameScreen -> GameScreen: 26. Đánh dấu matched
+            GameScreen -> GameScreen: 27. score += 100
+            GameScreen -> GameScreen: 28. matchedPairs++
+            GameScreen --> User: 29. Hiển thị animation match
+        else 2 cards không khớp
+            GameScreen -> GameScreen: 26. Lật lại cards sau 1s
+            GameScreen -> GameScreen: 27. moves++
+            GameScreen --> User: 29. Hiển thị "Không khớp"
+        end
+    end
+    
+else Game Type: Word Scramble
+    GameScreen -> GameScreen: 19. Tạo scrambled letters
+    GameScreen --> User: 20. Hiển thị letters đã xáo trộn
+    
+    loop Cho mỗi từ
+        User -> GameScreen: 21. Sắp xếp letters để tạo từ
+        GameScreen -> GameScreen: 22. Kiểm tra từ đúng
+        
+        alt Từ đúng
+            GameScreen -> GameScreen: 23. score += 100
+            GameScreen -> GameScreen: 24. correctAnswers++
+            GameScreen -> GameScreen: 25. currentWordIndex++
+            GameScreen --> User: 26. Hiển thị "Đúng!"
+        else Từ sai
+            GameScreen -> GameScreen: 23. wrongAnswers++
+            GameScreen --> User: 26. Hiển thị "Sai! Thử lại"
+        end
+        
+        alt Người dùng dùng hint
+            User -> GameScreen: 27. Nhấn "Hint"
+            GameScreen -> GameScreen: 28. Hiển thị chữ cái tiếp theo
+            GameScreen -> GameScreen: 29. hintsUsed++
+        end
+        
+        alt Người dùng skip
+            User -> GameScreen: 27. Nhấn "Skip"
+            GameScreen -> GameScreen: 28. wrongAnswers++
+            GameScreen -> GameScreen: 29. currentWordIndex++
+        end
+        
+        GameScreen -> GameScreen: 30. Load từ tiếp theo
+    end
+    
+else Game Type: Word Search
+    GameScreen -> GameScreen: 19. Tạo word grid
+    note right: Grid 10x10 với các từ ẩn trong đó
+    
+    GameScreen --> User: 20. Hiển thị grid và danh sách từ cần tìm
+    
+    loop Cho đến khi tìm hết các từ
+        User -> GameScreen: 21. Swipe để chọn các ô liên tiếp
+        GameScreen -> GameScreen: 22. Highlight các ô đã chọn
+        GameScreen -> GameScreen: 23. Kiểm tra từ đúng
+        
+        alt Từ đúng
+            GameScreen -> GameScreen: 24. score += 100
+            GameScreen -> GameScreen: 25. correctAnswers++
+            GameScreen -> GameScreen: 26. Đánh dấu từ đã tìm
+            GameScreen --> User: 27. Hiển thị animation tìm thấy
+        else Từ sai
+            GameScreen -> GameScreen: 24. Deselect các ô
+            GameScreen --> User: 27. Hiển thị "Không đúng"
+        end
+    end
+end
+
+GameScreen -> GameScreen: 31. Bắt đầu timer
+note right: Đếm thời gian chơi game
+
+GameScreen -> GameScreen: 32. Game hoàn thành
+note right: Tất cả từ đã hoàn thành\nhoặc hết thời gian
+
+GameScreen -> GameScreen: 33. Dừng timer
+GameScreen -> GameScreen: 34. Tính toán kết quả cuối cùng
+note right: - score\n- timeSeconds\n- accuracy\n- correctAnswers\n- wrongAnswers
+
+GameScreen -> GameScreen: 35. Tạo GameScoreModel
+note right: - userId\n- gameId\n- gameType\n- score\n- maxScore\n- timeSeconds\n- correctAnswers\n- wrongAnswers\n- accuracy\n- playedAt
+
+GameScreen -> GameService: 36. saveGameScore(gameScore)
+activate GameService
+
+GameService -> Firestore: 37. Lưu score vào game_scores
+activate Firestore
+note right: game_scores/{scoreId}\n  - userId\n  - gameId\n  - gameType\n  - score\n  - timeSeconds\n  - accuracy\n  - playedAt
+Firestore --> GameService: 38. Success
+deactivate Firestore
+
+GameService -> Firestore: 39. Cập nhật game stats
+activate Firestore
+note right: mini_games/{gameId}\n  - playCount++\n  - Cập nhật averageScore
+Firestore --> GameService: 40. Success
+deactivate Firestore
+
+GameService --> GameScreen: 41. Success
+deactivate GameService
+
+GameScreen -> GameScreen: 42. Hiển thị completion dialog
+GameScreen --> User: 43. Hiển thị kết quả game
+note right: - Điểm số: X/MAX\n- Thời gian: T giây\n- Độ chính xác: Y%\n- Số câu đúng: Z\n- Xếp hạng (nếu có)
+
+alt Người dùng muốn chơi lại
+    User -> GameScreen: 44. Nhấn "Chơi lại"
+    GameScreen -> GameScreen: 45. Reset game state
+    GameScreen --> User: 46. Hiển thị lại màn hình game
+else Người dùng hoàn thành
+    User -> GameScreen: 44. Nhấn "Hoàn thành"
+    GameScreen -> MenuScreen: 45. Navigate back
+    deactivate GameScreen
+end
+
+deactivate GameScreen
+
+== Alternative Flows ==
+
+== A1: Game có time limit ==
+GameScreen -> GameScreen: Timer đếng đến 0
+GameScreen -> GameScreen: Tự động completeGame()
+GameScreen --> User: Hiển thị "Hết thời gian!"
+GameScreen -> GameScreen: Chuyển đến show results
+
+== A2: Xem leaderboard sau khi chơi ==
+User -> GameScreen: Nhấn "Xem bảng xếp hạng"
+GameScreen -> GameService: getGameLeaderboard(gameId)
+GameService -> Firestore: Query top scores
+Firestore --> GameService: List top scores
+GameService --> GameScreen: Leaderboard data
+GameScreen --> User: Hiển thị bảng xếp hạng
+
+== A3: Xem lịch sử chơi game ==
+User -> MenuScreen: Nhấn "Lịch sử chơi"
+MenuScreen -> GameService: getGameHistory(userId)
+GameService -> Firestore: Query game_scores by userId
+Firestore --> GameService: List game scores
+GameService --> MenuScreen: Game history
+MenuScreen --> User: Hiển thị lịch sử chơi game
+
+@enduml

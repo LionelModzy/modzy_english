@@ -1722,6 +1722,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> with TickerProv
           synonyms: [],
           antonyms: [],
           partOfSpeech: '',
+          createdBy: 'system',
           lessonIds: [],
           createdAt: DateTime.now(),
           isActive: true,

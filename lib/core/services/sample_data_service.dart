@@ -35,6 +35,7 @@ class SampleDataService {
           updatedAt: null,
           isActive: true,
           usageCount: 0,
+          createdBy: 'system',
           metadata: {'sampleData': true},
         ),
         VocabularyModel(
@@ -56,6 +57,7 @@ class SampleDataService {
           updatedAt: null,
           isActive: true,
           usageCount: 0,
+          createdBy: 'system',
           metadata: {'sampleData': true},
         ),
         VocabularyModel(
@@ -77,6 +79,7 @@ class SampleDataService {
           updatedAt: null,
           isActive: true,
           usageCount: 0,
+          createdBy: 'system',
           metadata: {'sampleData': true},
         ),
         VocabularyModel(
@@ -98,6 +101,7 @@ class SampleDataService {
           updatedAt: null,
           isActive: true,
           usageCount: 0,
+          createdBy: 'system',
           metadata: {'sampleData': true},
         ),
         VocabularyModel(
@@ -119,6 +123,7 @@ class SampleDataService {
           updatedAt: null,
           isActive: true,
           usageCount: 0,
+          createdBy: 'system',
           metadata: {'sampleData': true},
         ),
         VocabularyModel(
@@ -140,6 +145,7 @@ class SampleDataService {
           updatedAt: null,
           isActive: true,
           usageCount: 0,
+          createdBy: 'system',
           metadata: {'sampleData': true},
         ),
         VocabularyModel(
@@ -161,6 +167,7 @@ class SampleDataService {
           updatedAt: null,
           isActive: true,
           usageCount: 0,
+          createdBy: 'system',
           metadata: {'sampleData': true},
         ),
         VocabularyModel(
@@ -182,6 +189,7 @@ class SampleDataService {
           updatedAt: null,
           isActive: true,
           usageCount: 0,
+          createdBy: 'system',
           metadata: {'sampleData': true},
         ),
         VocabularyModel(
@@ -203,6 +211,7 @@ class SampleDataService {
           updatedAt: null,
           isActive: true,
           usageCount: 0,
+          createdBy: 'system',
           metadata: {'sampleData': true},
         ),
         VocabularyModel(
@@ -224,6 +233,7 @@ class SampleDataService {
           updatedAt: null,
           isActive: true,
           usageCount: 0,
+          createdBy: 'system',
           metadata: {'sampleData': true},
         ),
         VocabularyModel(
@@ -245,6 +255,7 @@ class SampleDataService {
           updatedAt: null,
           isActive: true,
           usageCount: 0,
+          createdBy: 'system',
           metadata: {'sampleData': true},
         ),
         VocabularyModel(
@@ -266,6 +277,7 @@ class SampleDataService {
           updatedAt: null,
           isActive: true,
           usageCount: 0,
+          createdBy: 'system',
           metadata: {'sampleData': true},
         ),
       ];

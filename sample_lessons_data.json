@@ -1,0 +1,304 @@
+[
+  {
+    "title": "Giới thiệu bản thân - Self Introduction",
+    "description": "Bài học cơ bản về cách giới thiệu bản thân bằng tiếng Anh, bao gồm các câu chào hỏi và cách nói về tên, tuổi, nghề nghiệp.",
+    "content": "# Giới thiệu bản thân - Self Introduction\n\n## Tổng quan\nBài học này sẽ giúp bạn học cách giới thiệu bản thân một cách tự tin và chuyên nghiệp bằng tiếng Anh.\n\n## Các cấu trúc câu cơ bản\n\n### Chào hỏi\n- Hello, my name is...\n- Hi, I'm...\n- Nice to meet you!\n- Pleased to meet you!\n\n### Giới thiệu tên\n- My name is [Name]\n- I'm [Name]\n- You can call me [Name]\n\n### Giới thiệu tuổi\n- I'm [age] years old\n- I'm [age]\n\n### Giới thiệu nghề nghiệp\n- I'm a [job]\n- I work as a [job]\n- I'm a student\n- I'm a teacher\n\n## Ví dụ hội thoại\n\n**A:** Hello! My name is Anna. What's your name?\n**B:** Hi Anna! I'm David. Nice to meet you!\n**A:** Nice to meet you too! How old are you?\n**B:** I'm 25 years old. And you?\n**A:** I'm 23. What do you do?\n**B:** I'm a teacher. What about you?\n**A:** I'm a student.",
+    "category": "Speaking",
+    "difficultyLevel": 1,
+    "estimatedDuration": 20,
+    "tags": ["greetings", "introduction", "beginner", "conversation", "basic"],
+    "objectives": [
+      "Học cách chào hỏi bằng tiếng Anh",
+      "Biết cách giới thiệu tên, tuổi, nghề nghiệp",
+      "Thực hành hội thoại giới thiệu bản thân",
+      "Tự tin giao tiếp trong các tình huống gặp gỡ"
+    ],
+    "audioUrl": null,
+    "imageUrl": null,
+    "videoUrl": null,
+    "sections": [
+      {
+        "title": "Chào hỏi cơ bản",
+        "content": "Trong phần này, bạn sẽ học các cách chào hỏi thông dụng trong tiếng Anh.\n\n**Các câu chào hỏi:**\n- Hello (Xin chào - trang trọng)\n- Hi (Xin chào - thân mật)\n- Good morning (Chào buổi sáng)\n- Good afternoon (Chào buổi chiều)\n- Good evening (Chào buổi tối)\n\n**Ví dụ:**\n- Hello, how are you?\n- Hi, nice to see you!\n- Good morning, everyone!",
+        "type": "text",
+        "mediaUrl": null,
+        "metadata": {}
+      },
+      {
+        "title": "Giới thiệu tên",
+        "content": "Có nhiều cách để giới thiệu tên của bạn:\n\n**Cấu trúc:**\n1. My name is + [Tên]\n2. I'm + [Tên]\n3. I'm called + [Tên]\n4. You can call me + [Tên]\n\n**Ví dụ:**\n- My name is John Smith.\n- I'm Sarah.\n- I'm called Tom.\n- You can call me Mike.\n\n**Lưu ý:** Khi giới thiệu tên, bạn có thể nói cả họ và tên, hoặc chỉ tên.",
+        "type": "text",
+        "mediaUrl": null,
+        "metadata": {}
+      },
+      {
+        "title": "Giới thiệu tuổi và nghề nghiệp",
+        "content": "Sau khi giới thiệu tên, bạn có thể nói về tuổi và nghề nghiệp.\n\n**Giới thiệu tuổi:**\n- I'm [số tuổi] years old.\n- I'm [số tuổi].\n\n**Giới thiệu nghề nghiệp:**\n- I'm a/an + [nghề nghiệp]\n- I work as a/an + [nghề nghiệp]\n- I'm a student.\n- I'm a teacher.\n- I'm a doctor.\n- I'm an engineer.\n\n**Ví dụ:**\n- I'm 25 years old and I'm a teacher.\n- I'm a student at university.\n- I work as a nurse.",
+        "type": "text",
+        "mediaUrl": null,
+        "metadata": {}
+      },
+      {
+        "title": "Hội thoại mẫu",
+        "content": "Hãy xem một đoạn hội thoại hoàn chỉnh:\n\n**Hội thoại 1:**\nA: Hello! My name is Lisa. What's your name?\nB: Hi Lisa! I'm Mark. Nice to meet you!\nA: Nice to meet you too! Where are you from?\nB: I'm from Vietnam. And you?\nA: I'm from England.\n\n**Hội thoại 2:**\nA: Hi, I'm Jack. I'm 28 years old.\nB: Hello Jack! I'm Maria. I'm 26. What do you do?\nA: I'm a programmer. How about you?\nB: I'm a designer. Nice to meet you!",
+        "type": "text",
+        "mediaUrl": null,
+        "metadata": {}
+      },
+      {
+        "title": "Bài tập thực hành",
+        "content": "Hãy thực hành bằng cách tự giới thiệu bản thân:\n\n1. Giới thiệu tên của bạn\n2. Nói về tuổi của bạn\n3. Nói về nghề nghiệp hoặc công việc của bạn\n4. Thêm thông tin về nơi bạn sống (optional)\n\n**Gợi ý:** Hãy luyện tập trước gương hoặc với bạn bè để tự tin hơn!",
+        "type": "exercise",
+        "mediaUrl": null,
+        "metadata": {}
+      }
+    ],
+    "vocabulary": [],
+    "isActive": true,
+    "isPremium": false,
+    "order": 1
+  },
+  {
+    "title": "Present Simple - Thì hiện tại đơn",
+    "description": "Học về thì hiện tại đơn (Present Simple Tense) - một trong những thì cơ bản nhất trong tiếng Anh, cách sử dụng và các quy tắc chia động từ.",
+    "content": "# Present Simple - Thì hiện tại đơn\n\n## Khái niệm\nThì hiện tại đơn (Present Simple) được sử dụng để diễn tả:\n- Thói quen hàng ngày\n- Sự thật hiển nhiên\n- Lịch trình, thời gian biểu\n- Hành động lặp đi lặp lại\n\n## Cấu trúc\n\n### Câu khẳng định\n**Với động từ thường:**\n- I/You/We/They + V (nguyên thể)\n- He/She/It + V(s/es)\n\n**Ví dụ:**\n- I go to school every day.\n- She goes to school every day.\n- They play football on weekends.\n\n### Câu phủ định\n**Với động từ thường:**\n- I/You/We/They + do not (don't) + V\n- He/She/It + does not (doesn't) + V\n\n**Ví dụ:**\n- I don't like coffee.\n- She doesn't play tennis.\n\n### Câu hỏi\n- Do + I/you/we/they + V?\n- Does + he/she/it + V?\n\n**Ví dụ:**\n- Do you speak English?\n- Does he work here?\n\n## Quy tắc thêm -s/-es\n\n1. Hầu hết động từ: thêm **-s**\n   - play → plays\n   - work → works\n\n2. Động từ kết thúc bằng -s, -ss, -sh, -ch, -x, -o: thêm **-es**\n   - go → goes\n   - watch → watches\n   - wash → washes\n\n3. Động từ kết thúc bằng phụ âm + -y: đổi -y thành -ies\n   - study → studies\n   - try → tries\n\n4. Động từ kết thúc bằng nguyên âm + -y: chỉ thêm -s\n   - play → plays\n   - enjoy → enjoys",
+    "category": "Grammar",
+    "difficultyLevel": 1,
+    "estimatedDuration": 30,
+    "tags": ["grammar", "present simple", "tense", "verb", "beginner"],
+    "objectives": [
+      "Hiểu khái niệm và cách sử dụng thì hiện tại đơn",
+      "Nắm vững cấu trúc câu khẳng định, phủ định, câu hỏi",
+      "Biết cách chia động từ ở ngôi thứ ba số ít",
+      "Áp dụng thì hiện tại đơn vào giao tiếp hàng ngày"
+    ],
+    "audioUrl": null,
+    "imageUrl": null,
+    "videoUrl": null,
+    "sections": [
+      {
+        "title": "Khái niệm và cách sử dụng",
+        "content": "Thì hiện tại đơn (Present Simple) là thì cơ bản nhất trong tiếng Anh.\n\n**Các trường hợp sử dụng:**\n\n1. **Thói quen hàng ngày:**\n   - I brush my teeth every morning.\n   - She drinks coffee every day.\n\n2. **Sự thật hiển nhiên:**\n   - The sun rises in the east.\n   - Water boils at 100°C.\n\n3. **Lịch trình, thời gian biểu:**\n   - The train leaves at 8 AM.\n   - School starts at 7:30.\n\n4. **Hành động lặp đi lặp lại:**\n   - We go to the park every Sunday.\n   - He plays tennis twice a week.",
+        "type": "text",
+        "mediaUrl": null,
+        "metadata": {}
+      },
+      {
+        "title": "Cấu trúc câu khẳng định",
+        "content": "**Công thức:**\n- I/You/We/They + động từ nguyên thể\n- He/She/It + động từ + s/es\n\n**Ví dụ:**\n- I work in a hospital. (Tôi làm việc trong bệnh viện)\n- You study English. (Bạn học tiếng Anh)\n- We live in Hanoi. (Chúng tôi sống ở Hà Nội)\n- They play football. (Họ chơi bóng đá)\n- He works in a hospital. (Anh ấy làm việc trong bệnh viện)\n- She studies English. (Cô ấy học tiếng Anh)\n- It rains a lot here. (Ở đây mưa nhiều)\n\n**Lưu ý:** Với chủ ngữ là ngôi thứ ba số ít (he, she, it), động từ phải thêm -s hoặc -es.",
+        "type": "text",
+        "mediaUrl": null,
+        "metadata": {}
+      },
+      {
+        "title": "Cấu trúc câu phủ định",
+        "content": "**Công thức:**\n- I/You/We/They + don't (do not) + động từ nguyên thể\n- He/She/It + doesn't (does not) + động từ nguyên thể\n\n**Ví dụ:**\n- I don't like coffee. (Tôi không thích cà phê)\n- You don't speak French. (Bạn không nói tiếng Pháp)\n- We don't watch TV. (Chúng tôi không xem TV)\n- They don't play tennis. (Họ không chơi tennis)\n- He doesn't work here. (Anh ấy không làm việc ở đây)\n- She doesn't study medicine. (Cô ấy không học y)\n- It doesn't rain much. (Trời không mưa nhiều)\n\n**Lưu ý:** Trong câu phủ định, động từ luôn ở dạng nguyên thể, không thêm -s/es.",
+        "type": "text",
+        "mediaUrl": null,
+        "metadata": {}
+      },
+      {
+        "title": "Cấu trúc câu hỏi",
+        "content": "**Công thức:**\n- Do + I/you/we/they + động từ nguyên thể?\n- Does + he/she/it + động từ nguyên thể?\n\n**Ví dụ:**\n- Do you speak English? (Bạn có nói tiếng Anh không?)\n- Do we need to go? (Chúng ta có cần đi không?)\n- Do they like pizza? (Họ có thích pizza không?)\n- Does he work here? (Anh ấy có làm việc ở đây không?)\n- Does she play the piano? (Cô ấy có chơi piano không?)\n- Does it rain a lot? (Trời có mưa nhiều không?)\n\n**Câu trả lời:**\n- Yes, I do. / No, I don't.\n- Yes, she does. / No, she doesn't.\n\n**Câu hỏi Wh-:**\n- What do you do? (Bạn làm nghề gì?)\n- Where does she live? (Cô ấy sống ở đâu?)\n- When do they start? (Khi nào họ bắt đầu?)",
+        "type": "text",
+        "mediaUrl": null,
+        "metadata": {}
+      },
+      {
+        "title": "Quy tắc thêm -s/-es",
+        "content": "Khi chia động từ với chủ ngữ là he/she/it, cần thêm -s hoặc -es:\n\n**1. Hầu hết động từ: thêm -s**\n- play → plays\n- work → works\n- like → likes\n- see → sees\n\n**2. Động từ kết thúc bằng -s, -ss, -sh, -ch, -x, -o: thêm -es**\n- go → goes\n- do → does\n- watch → watches\n- wash → washes\n- fix → fixes\n- pass → passes\n\n**3. Động từ kết thúc bằng phụ âm + -y: đổi -y thành -ies**\n- study → studies\n- try → tries\n- fly → flies\n- cry → cries\n\n**4. Động từ kết thúc bằng nguyên âm + -y: chỉ thêm -s**\n- play → plays\n- enjoy → enjoys\n- stay → stays\n\n**Ngoại lệ:**\n- have → has\n- be → is",
+        "type": "text",
+        "mediaUrl": null,
+        "metadata": {}
+      },
+      {
+        "title": "Bài tập thực hành",
+        "content": "Hãy hoàn thành các câu sau:\n\n1. I (go) ______ to school every day.\n2. She (like) ______ chocolate.\n3. They (not watch) ______ TV in the morning.\n4. He (study) ______ English?\n5. We (play) ______ football on weekends.\n\n**Đáp án:**\n1. go\n2. likes\n3. don't watch\n4. Does ... study\n5. play",
+        "type": "exercise",
+        "mediaUrl": null,
+        "metadata": {}
+      }
+    ],
+    "vocabulary": [],
+    "isActive": true,
+    "isPremium": false,
+    "order": 2
+  },
+  {
+    "title": "Từ vựng về Gia đình - Family Vocabulary",
+    "description": "Học các từ vựng cơ bản về gia đình bằng tiếng Anh, bao gồm các thành viên trong gia đình và cách mô tả mối quan hệ.",
+    "content": "# Từ vựng về Gia đình - Family Vocabulary\n\n## Thành viên gia đình cơ bản\n\n### Thế hệ đầu tiên\n- **father / dad / daddy** - bố, cha\n- **mother / mom / mum / mummy** - mẹ\n- **parents** - bố mẹ\n\n### Thế hệ thứ hai\n- **son** - con trai\n- **daughter** - con gái\n- **children / kids** - con cái (số nhiều)\n- **child** - đứa trẻ (số ít)\n\n### Anh chị em\n- **brother** - anh/em trai\n- **sister** - chị/em gái\n- **siblings** - anh chị em\n- **twins** - sinh đôi\n\n### Thế hệ trên\n- **grandfather / grandpa** - ông\n- **grandmother / grandma** - bà\n- **grandparents** - ông bà\n\n### Thế hệ dưới\n- **grandson** - cháu trai\n- **granddaughter** - cháu gái\n- **grandchildren** - cháu\n\n### Các thành viên khác\n- **uncle** - chú, bác, cậu\n- **aunt** - cô, dì, bác gái\n- **cousin** - anh chị em họ\n- **nephew** - cháu trai (con của anh/chị/em)\n- **niece** - cháu gái (con của anh/chị/em)",
+    "category": "Vocabulary",
+    "difficultyLevel": 1,
+    "estimatedDuration": 25,
+    "tags": ["vocabulary", "family", "relationships", "beginner", "basic"],
+    "objectives": [
+      "Học các từ vựng về thành viên gia đình",
+      "Biết cách mô tả mối quan hệ trong gia đình",
+      "Thực hành sử dụng từ vựng trong câu",
+      "Mở rộng vốn từ vựng về chủ đề gia đình"
+    ],
+    "audioUrl": null,
+    "imageUrl": null,
+    "videoUrl": null,
+    "sections": [
+      {
+        "title": "Thành viên gia đình trực tiếp",
+        "content": "**Bố mẹ:**\n- father / dad / daddy - bố, cha\n- mother / mom / mum / mummy - mẹ\n- parents - bố mẹ (số nhiều)\n\n**Con cái:**\n- son - con trai\n- daughter - con gái\n- children / kids - con cái (số nhiều)\n- child - đứa trẻ (số ít)\n\n**Ví dụ câu:**\n- My father is a doctor.\n- I have two children: a son and a daughter.\n- Her parents live in Hanoi.\n\n**Anh chị em:**\n- brother - anh/em trai\n- sister - chị/em gái\n- siblings - anh chị em\n- elder brother / older brother - anh trai\n- younger brother - em trai\n- elder sister / older sister - chị gái\n- younger sister - em gái",
+        "type": "text",
+        "mediaUrl": null,
+        "metadata": {}
+      },
+      {
+        "title": "Ông bà và cháu",
+        "content": "**Thế hệ trên:**\n- grandfather / grandpa - ông\n- grandmother / grandma - bà\n- grandparents - ông bà\n\n**Thế hệ dưới:**\n- grandson - cháu trai\n- granddaughter - cháu gái\n- grandchildren - cháu (số nhiều)\n\n**Ví dụ câu:**\n- My grandparents are very kind.\n- She has two grandchildren.\n- His grandfather is 80 years old.\n\n**Lưu ý:** Khi nói về ông bà nội/ngoại, có thể dùng:\n- paternal grandfather - ông nội\n- maternal grandfather - ông ngoại\n- paternal grandmother - bà nội\n- maternal grandmother - bà ngoại",
+        "type": "text",
+        "mediaUrl": null,
+        "metadata": {}
+      },
+      {
+        "title": "Họ hàng mở rộng",
+        "content": "**Chú, bác, cậu, dì:**\n- uncle - chú, bác, cậu\n- aunt - cô, dì, bác gái\n\n**Anh chị em họ:**\n- cousin - anh chị em họ (có thể là nam hoặc nữ)\n\n**Cháu (con của anh/chị/em):**\n- nephew - cháu trai\n- niece - cháu gái\n\n**Ví dụ câu:**\n- My uncle lives in Ho Chi Minh City.\n- I have three cousins.\n- Her niece is very cute.\n- His nephew is studying abroad.\n\n**Mối quan hệ khác:**\n- father-in-law - bố chồng/bố vợ\n- mother-in-law - mẹ chồng/mẹ vợ\n- brother-in-law - anh/em rể, anh/em vợ\n- sister-in-law - chị/em dâu, chị/em vợ",
+        "type": "text",
+        "mediaUrl": null,
+        "metadata": {}
+      },
+      {
+        "title": "Mô tả gia đình",
+        "content": "**Các cụm từ hữu ích:**\n\n- **family members** - thành viên gia đình\n- **extended family** - gia đình mở rộng (bao gồm họ hàng)\n- **nuclear family** - gia đình hạt nhân (chỉ bố mẹ và con)\n- **single parent** - bố/mẹ đơn thân\n- **stepfather** - bố dượng\n- **stepmother** - mẹ kế\n- **stepbrother / stepsister** - anh/chị/em cùng cha/mẹ khác mẹ/cha\n- **half-brother / half-sister** - anh/chị/em cùng cha hoặc cùng mẹ\n\n**Ví dụ đoạn văn:**\n\n\"I come from a big family. I have two brothers and one sister. My father is a teacher and my mother is a nurse. My grandparents live with us. I also have many cousins because both of my parents come from large families.\"",
+        "type": "text",
+        "mediaUrl": null,
+        "metadata": {}
+      },
+      {
+        "title": "Bài tập thực hành",
+        "content": "**Bài tập 1: Điền từ vào chỗ trống**\n\n1. My ______ is my mother's brother.\n2. Her ______ is her father's father.\n3. I have one ______ and two ______.\n4. Their ______ are very young.\n\n**Bài tập 2: Mô tả gia đình của bạn**\n\nHãy viết một đoạn văn ngắn (5-7 câu) mô tả về gia đình của bạn, sử dụng các từ vựng đã học.\n\n**Gợi ý:**\n- Giới thiệu số lượng thành viên\n- Nói về nghề nghiệp của bố mẹ\n- Mô tả về anh chị em (nếu có)\n- Nói về ông bà (nếu có)",
+        "type": "exercise",
+        "mediaUrl": null,
+        "metadata": {}
+      }
+    ],
+    "vocabulary": [],
+    "isActive": true,
+    "isPremium": false,
+    "order": 3
+  },
+  {
+    "title": "Luyện nghe - Chủ đề Shopping",
+    "description": "Bài luyện nghe về chủ đề mua sắm, giúp bạn cải thiện kỹ năng nghe hiểu tiếng Anh thông qua các đoạn hội thoại trong cửa hàng.",
+    "content": "# Luyện nghe - Chủ đề Shopping\n\n## Tổng quan\nBài học này sẽ giúp bạn cải thiện kỹ năng nghe thông qua các tình huống mua sắm thực tế như mua quần áo, thực phẩm, và các vật dụng hàng ngày.\n\n## Từ vựng quan trọng\n\n### Cửa hàng\n- **shop / store** - cửa hàng\n- **supermarket** - siêu thị\n- **market** - chợ\n- **shopping mall** - trung tâm thương mại\n- **department store** - cửa hàng bách hóa\n\n### Hành động mua sắm\n- **buy** - mua\n- **sell** - bán\n- **shop** - đi mua sắm\n- **pay** - thanh toán\n- **cost** - có giá\n- **spend** - chi tiêu\n\n### Các câu hỏi thường dùng\n- How much is this? - Cái này giá bao nhiêu?\n- Can I try this on? - Tôi có thể thử cái này không?\n- Do you have this in size M? - Bạn có cỡ M không?\n- Can I pay by card? - Tôi có thể trả bằng thẻ không?\n- Where can I find...? - Tôi có thể tìm... ở đâu?\n\n## Các đoạn hội thoại mẫu\n\n### Hội thoại 1: Mua quần áo\n**Customer:** Excuse me, do you have this shirt in blue?\n**Shop assistant:** Yes, we do. What size are you looking for?\n**Customer:** Medium, please.\n**Shop assistant:** Here you are. Would you like to try it on?\n**Customer:** Yes, please. Where is the fitting room?\n**Shop assistant:** It's over there, on your right.\n**Customer:** Thank you!\n\n### Hội thoại 2: Thanh toán\n**Shop assistant:** That'll be $25, please.\n**Customer:** Can I pay by card?\n**Shop assistant:** Of course. Just insert your card here.\n**Customer:** Thank you.\n**Shop assistant:** Here's your receipt. Have a nice day!",
+    "category": "Listening",
+    "difficultyLevel": 2,
+    "estimatedDuration": 25,
+    "tags": ["listening", "shopping", "conversation", "intermediate", "daily-life"],
+    "objectives": [
+      "Cải thiện kỹ năng nghe hiểu tiếng Anh",
+      "Nắm vững từ vựng về mua sắm",
+      "Hiểu các đoạn hội thoại trong cửa hàng",
+      "Thực hành nghe và trả lời câu hỏi"
+    ],
+    "audioUrl": null,
+    "imageUrl": null,
+    "videoUrl": null,
+    "sections": [
+      {
+        "title": "Từ vựng về mua sắm",
+        "content": "**Các loại cửa hàng:**\n- shop / store - cửa hàng\n- supermarket - siêu thị\n- market - chợ\n- shopping mall - trung tâm thương mại\n- department store - cửa hàng bách hóa\n- bookstore - hiệu sách\n- bakery - tiệm bánh\n- pharmacy - hiệu thuốc\n\n**Đồ vật và hàng hóa:**\n- clothes - quần áo\n- food - thực phẩm\n- groceries - đồ tạp hóa\n- price - giá\n- discount - giảm giá\n- sale - đợt giảm giá\n- receipt - hóa đơn\n\n**Các cụm động từ:**\n- go shopping - đi mua sắm\n- try on - thử\n- pay for - trả tiền cho\n- look for - tìm kiếm",
+        "type": "text",
+        "mediaUrl": null,
+        "metadata": {}
+      },
+      {
+        "title": "Các câu hỏi thường dùng",
+        "content": "**Khi tìm kiếm sản phẩm:**\n- Do you have...? - Bạn có... không?\n- Where can I find...? - Tôi có thể tìm... ở đâu?\n- Can you help me? - Bạn có thể giúp tôi không?\n- Do you sell...? - Bạn có bán... không?\n\n**Khi hỏi về kích cỡ và màu sắc:**\n- Do you have this in size M? - Bạn có cỡ M không?\n- What sizes do you have? - Bạn có những cỡ nào?\n- Do you have this in blue? - Bạn có màu xanh không?\n- What colors are available? - Có những màu nào?\n\n**Khi hỏi giá:**\n- How much is this? - Cái này giá bao nhiêu?\n- How much does it cost? - Nó có giá bao nhiêu?\n- What's the price? - Giá là bao nhiêu?\n- Is this on sale? - Cái này có đang giảm giá không?",
+        "type": "text",
+        "mediaUrl": null,
+        "metadata": {}
+      },
+      {
+        "title": "Hội thoại mua quần áo",
+        "content": "**Tình huống: Mua áo sơ mi**\n\n**Customer:** Excuse me, do you have this shirt in blue?\n**Shop assistant:** Yes, we do. What size are you looking for?\n**Customer:** Medium, please.\n**Shop assistant:** Let me check... Yes, here you are.\n**Customer:** Can I try it on?\n**Shop assistant:** Of course. The fitting room is over there, on your right.\n**Customer:** Thank you! (sau khi thử) This fits perfectly. How much is it?\n**Shop assistant:** It's $35.\n**Customer:** I'll take it.\n**Shop assistant:** Great! How would you like to pay?\n**Customer:** By card, please.\n**Shop assistant:** Perfect. Here's your receipt. Have a nice day!",
+        "type": "text",
+        "mediaUrl": null,
+        "metadata": {}
+      },
+      {
+        "title": "Hội thoại mua thực phẩm",
+        "content": "**Tình huống: Mua sắm ở siêu thị**\n\n**Customer:** Excuse me, where can I find the bread?\n**Shop assistant:** It's in aisle 3, on your left.\n**Customer:** Thank you. And where are the eggs?\n**Shop assistant:** They're in the dairy section, next to the milk.\n**Customer:** Great, thanks. (sau khi lấy đồ) How much is this?\n**Shop assistant:** The bread is $2.50 and the eggs are $3.00. That's $5.50 total.\n**Customer:** Do you have any discounts today?\n**Shop assistant:** Yes, if you buy 2 loaves of bread, you get 10% off.\n**Customer:** Okay, I'll take two loaves then.\n**Shop assistant:** That'll be $7.00 for everything. Cash or card?\n**Customer:** Card, please.",
+        "type": "text",
+        "mediaUrl": null,
+        "metadata": {}
+      },
+      {
+        "title": "Bài tập nghe hiểu",
+        "content": "**Bài tập:**\n\nSau khi nghe các đoạn hội thoại (bạn cần thêm file audio), hãy trả lời các câu hỏi sau:\n\n1. What is the customer looking for?\n2. What size/color does the customer want?\n3. How much does the item cost?\n4. How does the customer pay?\n5. Where is the item located?\n\n**Lưu ý:** Bạn cần thêm file audio vào phần này để học viên có thể luyện nghe thực tế.",
+        "type": "exercise",
+        "mediaUrl": null,
+        "metadata": {}
+      }
+    ],
+    "vocabulary": [],
+    "isActive": true,
+    "isPremium": false,
+    "order": 4
+  },
+  {
+    "title": "Viết email cơ bản - Basic Email Writing",
+    "description": "Học cách viết email tiếng Anh cơ bản, bao gồm cấu trúc email, các cụm từ thường dùng, và cách viết email cho các mục đích khác nhau.",
+    "content": "# Viết email cơ bản - Basic Email Writing\n\n## Cấu trúc email cơ bản\n\nMột email tiếng Anh thường bao gồm các phần sau:\n\n1. **Subject (Tiêu đề)** - Ngắn gọn, rõ ràng\n2. **Greeting (Lời chào)** - Chào hỏi người nhận\n3. **Opening (Mở đầu)** - Giới thiệu mục đích\n4. **Body (Nội dung chính)** - Thông tin chi tiết\n5. **Closing (Kết thúc)** - Tóm tắt hoặc yêu cầu hành động\n6. **Sign-off (Ký tên)** - Lời chào kết thúc\n7. **Signature (Chữ ký)** - Tên và thông tin liên hệ\n\n## Các loại email\n\n### Email trang trọng (Formal)\nSử dụng khi:\n- Viết cho đồng nghiệp, sếp\n- Gửi đơn xin việc\n- Liên hệ với khách hàng\n\n### Email thân mật (Informal)\nSử dụng khi:\n- Viết cho bạn bè, gia đình\n- Giao tiếp không chính thức\n\n## Các cụm từ hữu ích\n\n### Mở đầu email\n**Trang trọng:**\n- Dear Mr./Ms. [Name],\n- Dear Sir/Madam,\n- To whom it may concern,\n\n**Thân mật:**\n- Hi [Name],\n- Hello [Name],\n- Hey [Name],\n\n### Giới thiệu mục đích\n- I am writing to...\n- I would like to...\n- I'm writing regarding...\n- I'm contacting you about...",
+    "category": "Writing",
+    "difficultyLevel": 2,
+    "estimatedDuration": 30,
+    "tags": ["writing", "email", "communication", "intermediate", "business"],
+    "objectives": [
+      "Nắm vững cấu trúc email tiếng Anh",
+      "Học các cụm từ và mẫu câu thường dùng",
+      "Phân biệt email trang trọng và thân mật",
+      "Thực hành viết email cho các tình huống khác nhau"
+    ],
+    "audioUrl": null,
+    "imageUrl": null,
+    "videoUrl": null,
+    "sections": [
+      {
+        "title": "Cấu trúc email",
+        "content": "**1. Subject (Tiêu đề)**\n- Ngắn gọn, rõ ràng\n- Tóm tắt nội dung chính\n- Ví dụ: \"Meeting Request\", \"Job Application\", \"Thank You\"\n\n**2. Greeting (Lời chào)**\n- Dear + Tên (trang trọng)\n- Hi/Hello + Tên (thân mật)\n\n**3. Opening (Mở đầu)**\n- Nêu mục đích viết email\n- Cảm ơn (nếu cần)\n\n**4. Body (Nội dung chính)**\n- Thông tin chi tiết\n- Có thể chia thành đoạn\n- Sử dụng từ nối để liên kết ý\n\n**5. Closing (Kết thúc)**\n- Tóm tắt lại\n- Yêu cầu phản hồi\n- Đề xuất hành động tiếp theo\n\n**6. Sign-off (Ký tên)**\n- Best regards (trang trọng)\n- Sincerely (rất trang trọng)\n- Best wishes (thân mật)\n- Thanks (thân mật)\n\n**7. Signature (Chữ ký)**\n- Tên\n- Chức danh (nếu có)\n- Thông tin liên hệ",
+        "type": "text",
+        "mediaUrl": null,
+        "metadata": {}
+      },
+      {
+        "title": "Email trang trọng (Formal)",
+        "content": "**Khi nào sử dụng:**\n- Viết cho đồng nghiệp, sếp, khách hàng\n- Gửi đơn xin việc\n- Liên hệ lần đầu\n- Các tình huống chuyên nghiệp\n\n**Ví dụ email trang trọng:**\n\n**Subject:** Meeting Request - Project Discussion\n\n**Body:**\nDear Mr. Smith,\n\nI am writing to request a meeting to discuss the upcoming project. I would like to schedule a time that is convenient for you.\n\nI am available on Tuesday and Wednesday next week, from 2 PM to 5 PM. Please let me know which time works best for you.\n\nI look forward to hearing from you.\n\nBest regards,\nJohn Doe\nProject Manager\nEmail: john.doe@company.com\nPhone: 123-456-7890\n\n**Các cụm từ thường dùng:**\n- I am writing to...\n- I would like to...\n- I would appreciate it if...\n- I look forward to...\n- Please find attached...\n- Thank you for your time.",
+        "type": "text",
+        "mediaUrl": null,
+        "metadata": {}
+      },
+      {
+        "title": "Email thân mật (Informal)",
+        "content": "**Khi nào sử dụng:**\n- Viết cho bạn bè, gia đình\n- Giao tiếp không chính thức\n- Email cá nhân\n\n**Ví dụ email thân mật:**\n\n**Subject:** Party this weekend!\n\n**Body:**\nHi Sarah,\n\nHope you're doing well! I'm writing to invite you to my birthday party this Saturday at 7 PM.\n\nIt's going to be at my place. We'll have pizza, music, and games. Bring anyone you'd like!\n\nLet me know if you can make it. I'd love to see you there!\n\nThanks,\nMike\n\n**Các cụm từ thường dùng:**\n- Hope you're doing well\n- Just wanted to...\n- Let me know...\n- I'd love to...\n- Thanks!\n- See you soon!",
+        "type": "text",
+        "mediaUrl": null,
+        "metadata": {}
+      },
+      {
+        "title": "Các loại email thường gặp",
+        "content": "**1. Email xin việc (Job Application)**\n- Subject: Application for [Position Name]\n- Nội dung: Giới thiệu bản thân, kinh nghiệm, lý do ứng tuyển\n- Kèm CV và cover letter\n\n**2. Email cảm ơn (Thank You Email)**\n- Subject: Thank You for...\n- Nội dung: Cảm ơn về điều gì, tại sao quan trọng\n- Ngắn gọn, chân thành\n\n**3. Email xin lỗi (Apology Email)**\n- Subject: Apology / Sorry about...\n- Nội dung: Xin lỗi về điều gì, giải thích (nếu cần), đề xuất giải pháp\n- Thể hiện sự chân thành\n\n**4. Email yêu cầu (Request Email)**\n- Subject: Request for...\n- Nội dung: Yêu cầu gì, tại sao cần, deadline\n- Rõ ràng, lịch sự\n\n**5. Email thông báo (Announcement Email)**\n- Subject: Announcement: [Topic]\n- Nội dung: Thông báo gì, chi tiết, thời gian địa điểm\n- Ngắn gọn, dễ hiểu",
+        "type": "text",
+        "mediaUrl": null,
+        "metadata": {}
+      },
+      {
+        "title": "Bài tập thực hành",
+        "content": "**Bài tập 1:** Viết email xin lỗi cho đồng nghiệp vì đến muộn buổi họp\n\n**Bài tập 2:** Viết email mời bạn bè đến dự tiệc sinh nhật\n\n**Bài tập 3:** Viết email gửi sếp để xin nghỉ phép\n\n**Gợi ý:**\n- Chọn phong cách phù hợp (formal/informal)\n- Sử dụng cấu trúc email đầy đủ\n- Kiểm tra chính tả và ngữ pháp\n- Đảm bảo nội dung rõ ràng, dễ hiểu",
+        "type": "exercise",
+        "mediaUrl": null,
+        "metadata": {}
+      }
+    ],
+    "vocabulary": [],
+    "isActive": true,
+    "isPremium": false,
+    "order": 5
+  }
+]

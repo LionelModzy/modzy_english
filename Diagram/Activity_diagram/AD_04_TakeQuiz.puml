@@ -1,0 +1,104 @@
+@startuml AD_04_TakeQuiz - Activity Diagram: Làm bài quiz
+
+title Activity Diagram: Làm bài quiz (Take Quiz)
+
+start
+
+:Người dùng duyệt danh sách quiz;
+
+:Chọn quiz muốn làm;
+
+:Nhấn "Bắt đầu làm bài";
+
+:Lấy thông tin quiz từ Firestore;
+
+:Hiển thị câu hỏi đầu tiên;
+note right
+  - Hiển thị câu hỏi
+  - Hiển thị các lựa chọn
+  - Hiển thị timer (nếu có)
+  - Hiển thị progress bar
+end note
+
+if (Quiz có timer?) then (Có)
+  :Bắt đầu đếm ngược;
+endif
+
+repeat
+  :Người dùng đọc câu hỏi;
+
+  :Người dùng chọn đáp án;
+
+  :Lưu đáp án đã chọn;
+
+  :Chuyển đến câu hỏi tiếp theo;
+
+repeat while (Còn câu hỏi?) is (Có)
+-> Không còn câu hỏi;
+
+:Người dùng nhấn "Nộp bài";
+
+:Xác nhận nộp bài;
+
+if (Xác nhận nộp bài?) then (Không)
+  :Quay lại làm bài;
+  stop
+else (Có)
+  :Tính điểm số;
+  note right
+    - So sánh đáp án với đáp án đúng
+    - Tính số câu đúng
+    - Tính điểm (điểm/câu * số câu đúng)
+    - Xác định đạt/không đạt
+  end note
+
+  :Hiển thị kết quả;
+  note right
+    - Tổng điểm
+    - Số câu đúng/tổng số câu
+    - Tỉ lệ đúng (%)
+    - Đạt/Không đạt
+    - Chi tiết từng câu (đúng/sai)
+  end note
+
+  :Lưu kết quả vào quizResults;
+  note right
+    - quizId
+    - userId
+    - score
+    - totalQuestions
+    - correctAnswers
+    - answers (chi tiết)
+    - completedAt
+    - passed (true/false)
+  end note
+
+  :Cập nhật quiz statistics;
+  note right
+    - totalAttempts++
+    - totalPassed++ (nếu đạt)
+    - averageScore
+    - passRate
+  end note
+
+  if (Quiz đạt (score >= passingScore)?) then (Có)
+    :Cập nhật user stats;
+    :Sync progress;
+  endif
+
+  :Hiển thị animation kết quả;
+
+  :Người dùng xem chi tiết từng câu;
+
+  if (Người dùng muốn làm lại?) then (Có)
+    :Reset quiz;
+    :Bắt đầu lại từ đầu;
+  else (Không)
+    :Quay về danh sách quiz;
+  endif
+endif
+
+stop
+
+@enduml
+

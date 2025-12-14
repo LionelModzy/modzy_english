@@ -1,0 +1,143 @@
+@startuml SD_03_CompleteLesson - Sequence Diagram: Hoàn thành bài học
+
+title Sequence Diagram: Hoàn thành bài học (Complete Lesson)
+
+actor "Người dùng\n(User)" as User
+participant "Lesson Detail Screen" as LessonScreen
+participant "Lesson Player Screen" as PlayerScreen
+participant "Learning Progress Service" as ProgressService
+participant "User Progress Utils" as ProgressUtils
+participant "Firestore" as Firestore
+participant "Home Screen" as HomeScreen
+
+== Main Flow ==
+
+User -> LessonScreen: 1. Xem danh sách bài học
+activate LessonScreen
+
+LessonScreen -> Firestore: 2. Lấy danh sách lessons
+activate Firestore
+Firestore --> LessonScreen: 3. List<LessonModel>
+deactivate Firestore
+
+LessonScreen --> User: 4. Hiển thị danh sách bài học
+
+User -> LessonScreen: 5. Chọn bài học muốn xem
+LessonScreen -> PlayerScreen: 6. Navigate to LessonPlayerScreen
+activate PlayerScreen
+deactivate LessonScreen
+
+PlayerScreen -> Firestore: 7. Lấy chi tiết bài học
+activate Firestore
+Firestore --> PlayerScreen: 8. LessonModel với sections
+deactivate Firestore
+
+PlayerScreen --> User: 9. Hiển thị bài học với các sections
+
+User -> PlayerScreen: 10. Xem các section của bài học
+loop Cho mỗi section
+    User -> PlayerScreen: 11. Phát video/audio/text section
+    PlayerScreen -> PlayerScreen: 12. Track thời gian xem
+    PlayerScreen -> ProgressService: 13. trackLessonProgress(\n  lessonId, timeSpent, completionPercentage)
+    activate ProgressService
+    ProgressService -> Firestore: 14. Lưu progress vào subcollection
+    activate Firestore
+    note right: users/{userId}/lesson_progress/{lessonId}\n  - lessonId\n  - timeSpent\n  - completionPercentage\n  - lastStudied
+    Firestore --> ProgressService: 15. Success
+    deactivate Firestore
+    ProgressService --> PlayerScreen: 16. Success
+    deactivate ProgressService
+end
+
+User -> PlayerScreen: 17. Xem hết tất cả sections
+PlayerScreen -> PlayerScreen: 18. Đánh dấu completionPercentage = 100%
+
+User -> PlayerScreen: 19. Nhấn "Hoàn thành bài học"
+
+PlayerScreen -> PlayerScreen: 20. Xác nhận hoàn thành
+note right: Kiểm tra đã xem đủ nội dung
+
+alt Xác nhận hoàn thành
+    PlayerScreen -> ProgressService: 21. markLessonAsCompleted(\n  lessonId, userId)
+    activate ProgressService
+    
+    ProgressService -> Firestore: 22. Kiểm tra lesson đã hoàn thành chưa
+    activate Firestore
+    Firestore --> ProgressService: 23. Chưa hoàn thành
+    deactivate Firestore
+    
+    ProgressService -> Firestore: 24. Thêm vào learningHistory
+    activate Firestore
+    note right: users/{userId}/learning_history/{historyId}\n  - lessonId\n  - completedAt\n  - score (nếu có)\n  - timeSpent
+    Firestore --> ProgressService: 25. Success
+    deactivate Firestore
+    
+    ProgressService -> Firestore: 26. Cập nhật user stats
+    activate Firestore
+    note right: users/{userId}\n  - totalLessonsCompleted++\n  - Cập nhật progressPercentage\n  - Cập nhật currentLevel nếu cần
+    Firestore --> ProgressService: 27. Success
+    deactivate Firestore
+    
+    ProgressService -> ProgressUtils: 28. Sync progress với stats
+    activate ProgressUtils
+    ProgressUtils -> Firestore: 29. Tính toán lại progress
+    activate Firestore
+    Firestore --> ProgressUtils: 30. Updated stats
+    deactivate Firestore
+    ProgressUtils --> ProgressService: 31. Success
+    deactivate ProgressUtils
+    
+    ProgressService --> PlayerScreen: 32. Success + Updated UserModel
+    deactivate ProgressService
+    
+    PlayerScreen -> PlayerScreen: 33. Hiển thị thông báo thành công
+    note right: "Chúc mừng! Bạn đã hoàn thành bài học"
+    
+    PlayerScreen -> LessonScreen: 34. Cập nhật trạng thái bài học
+    activate LessonScreen
+    LessonScreen -> LessonScreen: 35. Đánh dấu bài học đã hoàn thành
+    LessonScreen -> LessonScreen: 36. Cập nhật progress bar
+    deactivate LessonScreen
+    
+    alt Người dùng muốn quay về Home
+        PlayerScreen -> HomeScreen: 37. Navigate to HomeScreen
+        activate HomeScreen
+        HomeScreen -> HomeScreen: 38. Refresh progress card
+        HomeScreen -> Firestore: 39. Lấy updated progress
+        activate Firestore
+        Firestore --> HomeScreen: 40. Updated user stats
+        deactivate Firestore
+        HomeScreen --> User: 41. Hiển thị tiến độ mới
+        deactivate HomeScreen
+    else Người dùng ở lại
+        PlayerScreen --> User: 37. Ở lại màn hình bài học
+    end
+    
+else Hủy bỏ
+    PlayerScreen --> User: 21. Quay lại xem bài học
+end
+
+deactivate PlayerScreen
+
+== Alternative Flows ==
+
+== A1: Bài học đã hoàn thành trước đó ==
+ProgressService -> Firestore: Kiểm tra lesson đã hoàn thành
+Firestore --> ProgressService: Đã hoàn thành
+ProgressService --> PlayerScreen: Warning: Bài học đã hoàn thành
+PlayerScreen --> User: Hiển thị "Bạn đã hoàn thành bài học này"
+
+== A2: Chưa xem đủ nội dung ==
+PlayerScreen -> PlayerScreen: Kiểm tra completionPercentage
+PlayerScreen -> PlayerScreen: completionPercentage < 100%
+PlayerScreen --> User: Hiển thị cảnh báo "Bạn chưa xem hết nội dung"
+
+== A3: Đủ điều kiện lên level ==
+ProgressUtils -> Firestore: Tính toán progress
+ProgressUtils -> ProgressUtils: Kiểm tra điều kiện lên level
+ProgressUtils -> Firestore: Cập nhật currentLevel++
+Firestore --> ProgressUtils: Success
+ProgressUtils --> PlayerScreen: Level up notification
+PlayerScreen --> User: Hiển thị animation lên level\n"Chúc mừng! Bạn đã lên level mới"
+
+@enduml

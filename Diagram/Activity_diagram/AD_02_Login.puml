@@ -1,0 +1,76 @@
+@startuml AD_02_Login - Activity Diagram: Đăng nhập
+
+title Activity Diagram: Đăng nhập (Login)
+
+start
+
+:Người dùng mở màn hình đăng nhập;
+
+:Kiểm tra Remember Me;
+
+if (Có thông tin đăng nhập đã lưu?) then (Có)
+  :Tự động điền email và mật khẩu;
+  :Hiển thị checkbox "Ghi nhớ đăng nhập" đã được chọn;
+else (Không)
+  :Hiển thị form đăng nhập trống;
+endif
+
+:Người dùng nhập email;
+
+:Người dùng nhập mật khẩu;
+
+if (Người dùng chọn "Ghi nhớ đăng nhập"?) then (Có)
+  :Đánh dấu rememberMe = true;
+else (Không)
+  :Đánh dấu rememberMe = false;
+endif
+
+:Người dùng nhấn nút "Đăng nhập";
+
+:Validate dữ liệu đầu vào;
+
+if (Dữ liệu hợp lệ?) then (Không)
+  :Hiển thị lỗi validation;
+  stop
+else (Có)
+  :Gọi signInWithEmail();
+
+  :Xác thực với Firebase Auth;
+
+  if (Đăng nhập thành công?) then (Không)
+    if (Email/Mật khẩu sai?) then (Có)
+      :Hiển thị lỗi "Email hoặc mật khẩu không đúng";
+      stop
+    else (Tài khoản bị vô hiệu hóa)
+      :Đăng xuất ngay lập tức;
+      :Hiển thị lỗi "Tài khoản đã bị vô hiệu hóa";
+      stop
+    endif
+  else (Có)
+    :Lấy thông tin user từ Firestore;
+
+    :Cập nhật lastLoginAt;
+
+    if (Remember Me = true?) then (Có)
+      :Lưu thông tin đăng nhập;
+      note right
+        - Email
+        - Password
+        - Remember me: true
+      end note
+    else (Không)
+      :Xóa thông tin đăng nhập đã lưu;
+    endif
+
+    :Chuyển đến HomeScreen;
+
+    :Load thông tin user và tiến độ;
+
+    :Hiển thị màn hình chính;
+  endif
+endif
+
+stop
+
+@enduml
+

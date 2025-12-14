@@ -1,0 +1,189 @@
+@startuml SD_05_PracticeVocabulary - Sequence Diagram: Luyện tập từ vựng
+
+title Sequence Diagram: Luyện tập từ vựng (Practice Vocabulary)
+
+actor "Người dùng\n(User)" as User
+participant "Vocabulary Screen" as VocabScreen
+participant "Vocabulary Practice Screen" as PracticeScreen
+participant "Vocabulary Practice Session" as PracticeSession
+participant "Vocabulary Service" as VocabService
+participant "Learning Progress Service" as ProgressService
+participant "Bookmark Service" as BookmarkService
+participant "Firestore" as Firestore
+participant "AudioPlayer" as AudioPlayer
+
+== Main Flow ==
+
+User -> VocabScreen: 1. Duyệt danh sách từ vựng
+activate VocabScreen
+
+VocabScreen -> Firestore: 2. Lấy danh sách từ vựng
+activate Firestore
+Firestore --> VocabScreen: 3. List<VocabularyModel>
+deactivate Firestore
+
+VocabScreen --> User: 4. Hiển thị danh sách từ vựng
+
+User -> VocabScreen: 5. Chọn "Luyện tập từ vựng"
+VocabScreen -> PracticeScreen: 6. Navigate to PracticeScreen
+activate PracticeScreen
+deactivate VocabScreen
+
+PracticeScreen -> VocabService: 7. getVocabulariesByCategory(category)
+activate VocabService
+
+alt Có category filter
+    VocabService -> Firestore: 8. Query vocabularies by category
+    activate Firestore
+    Firestore --> VocabService: 9. List<VocabularyModel>
+    deactivate Firestore
+else Không có filter
+    VocabService -> Firestore: 8. getAllVocabulary()
+    activate Firestore
+    Firestore --> VocabService: 9. List<VocabularyModel>
+    deactivate Firestore
+end
+
+VocabService --> PracticeScreen: 10. List vocabularies
+deactivate VocabService
+
+PracticeScreen -> PracticeScreen: 11. Tạo practice set (20 từ)
+note right: Shuffle và chọn 20 từ ngẫu nhiên
+
+PracticeScreen -> PracticeScreen: 12. Hiển thị chọn mode luyện tập
+note right: - Flashcard\n- Multiple Choice\n- Typing\n- Listening
+
+User -> PracticeScreen: 13. Chọn mode luyện tập
+PracticeScreen -> PracticeSession: 14. Navigate to PracticeSession với vocabularies và mode
+activate PracticeSession
+deactivate PracticeScreen
+
+PracticeSession -> PracticeSession: 15. Khởi tạo session
+note right: - Set currentIndex = 0\n- Set correctAnswers = 0\n- Initialize quiz content
+
+PracticeSession --> User: 16. Hiển thị từ vựng đầu tiên
+
+loop Cho mỗi từ vựng
+    User -> PracticeSession: 17. Xem từ vựng
+    
+    alt Mode: Flashcard
+        PracticeSession --> User: 18. Hiển thị flashcard với từ
+        User -> PracticeSession: 19. Nhấn để xem nghĩa
+        PracticeSession --> User: 20. Hiển thị nghĩa
+        User -> PracticeSession: 21. Đánh dấu đúng/sai
+        PracticeSession -> PracticeSession: 22. Cập nhật correctAnswers
+        
+    else Mode: Multiple Choice
+        PracticeSession -> PracticeSession: 23. Generate multiple choice options
+        note right: 1 đáp án đúng + 3 đáp án sai
+        PracticeSession --> User: 24. Hiển thị câu hỏi và 4 lựa chọn
+        User -> PracticeSession: 25. Chọn đáp án
+        PracticeSession -> PracticeSession: 26. Kiểm tra đáp án đúng/sai
+        
+        alt Đáp án đúng
+            PracticeSession -> PracticeSession: 27. correctAnswers++
+            PracticeSession --> User: 28. Hiển thị "Đúng!" với animation
+        else Đáp án sai
+            PracticeSession --> User: 28. Hiển thị "Sai!" và đáp án đúng
+        end
+        
+    else Mode: Typing
+        PracticeSession --> User: 24. Hiển thị nghĩa và ô nhập
+        User -> PracticeSession: 25. Nhập từ tiếng Anh
+        PracticeSession -> PracticeSession: 26. So sánh với từ đúng (case insensitive)
+        
+        alt Từ đúng
+            PracticeSession -> PracticeSession: 27. correctAnswers++
+            PracticeSession --> User: 28. Hiển thị "Đúng!" với animation
+        else Từ sai
+            PracticeSession --> User: 28. Hiển thị "Sai!" và từ đúng
+        end
+        
+    else Mode: Listening
+        PracticeSession -> AudioPlayer: 24. Phát audio phát âm
+        activate AudioPlayer
+        AudioPlayer --> User: 25. Phát âm từ vựng
+        deactivate AudioPlayer
+        PracticeSession --> User: 26. Hiển thị 4 lựa chọn (chỉ có nghĩa)
+        User -> PracticeSession: 27. Chọn nghĩa phù hợp
+        PracticeSession -> PracticeSession: 28. Kiểm tra đáp án
+        
+        alt Đáp án đúng
+            PracticeSession -> PracticeSession: 29. correctAnswers++
+            PracticeSession --> User: 30. Hiển thị "Đúng!"
+        else Đáp án sai
+            PracticeSession --> User: 30. Hiển thị "Sai!" và đáp án đúng
+        end
+    end
+    
+    User -> PracticeSession: 31. Nhấn "Câu tiếp theo"
+    PracticeSession -> PracticeSession: 32. currentIndex++
+    
+    alt Còn từ vựng
+        PracticeSession --> User: 33. Hiển thị từ vựng tiếp theo
+    else Hết từ vựng
+        PracticeSession -> PracticeSession: 34. Chuyển đến showResults
+    end
+end
+
+PracticeSession -> PracticeSession: 35. Tính toán kết quả
+note right: - accuracy = (correctAnswers / total) * 100\n- timeSpent
+
+PracticeSession -> ProgressService: 36. trackGeneralProgress(\n  activityType: 'vocabulary_practice', details)
+activate ProgressService
+ProgressService -> Firestore: 37. Lưu vào general_progress
+activate Firestore
+note right: users/{userId}/general_progress/{progressId}\n  - activityType: 'vocabulary_practice'\n  - mode\n  - vocabulariesCount\n  - correctAnswers\n  - accuracy\n  - timeSpent
+Firestore --> ProgressService: 38. Success
+deactivate Firestore
+ProgressService --> PracticeSession: 39. Success
+deactivate ProgressService
+
+loop Cho mỗi từ vựng đã luyện tập
+    PracticeSession -> ProgressService: 40. trackVocabularyProgress(\n  vocabularyId, correctAnswers, totalQuestions)
+    activate ProgressService
+    ProgressService -> Firestore: 41. Lưu vocabulary mastery
+    activate Firestore
+    note right: users/{userId}/vocabulary_progress/{vocabId}\n  - vocabularyId\n  - correctAnswers\n  - totalQuestions\n  - practiceType\n  - timeSpent
+    Firestore --> ProgressService: 42. Success
+    deactivate Firestore
+    ProgressService --> PracticeSession: 43. Success
+    deactivate ProgressService
+end
+
+PracticeSession -> PracticeSession: 44. Show results screen
+PracticeSession --> User: 45. Hiển thị kết quả luyện tập
+note right: - Tổng số từ: X\n- Số câu đúng: Y\n- Độ chính xác: Z%\n- Thời gian: T phút
+
+alt Người dùng muốn luyện tập lại
+    User -> PracticeSession: 46. Nhấn "Luyện tập lại"
+    PracticeSession -> PracticeSession: 47. Reset session state
+    PracticeSession --> User: 48. Hiển thị từ vựng đầu tiên
+else Người dùng hoàn thành
+    User -> PracticeSession: 46. Nhấn "Hoàn thành"
+    PracticeSession -> PracticeScreen: 47. Navigate back
+    deactivate PracticeSession
+end
+
+deactivate PracticeSession
+
+== Alternative Flows ==
+
+== A1: Bookmark từ vựng trong khi luyện tập ==
+User -> PracticeSession: Nhấn nút "Bookmark"
+PracticeSession -> BookmarkService: bookmarkVocabulary(vocabId)
+activate BookmarkService
+BookmarkService -> Firestore: Thêm vào bookmarks collection
+Firestore --> BookmarkService: Success
+BookmarkService --> PracticeSession: Success
+deactivate BookmarkService
+PracticeSession --> User: Hiển thị "Đã thêm vào bookmark"
+
+== A2: Nghe phát âm ==
+User -> PracticeSession: Nhấn nút "Nghe phát âm"
+PracticeSession -> AudioPlayer: Phát audio pronunciation
+AudioPlayer --> User: Phát âm từ vựng
+PracticeSession -> ProgressService: Track listening activity
+ProgressService -> Firestore: Lưu listening progress
+
+@enduml

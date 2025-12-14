@@ -1,0 +1,183 @@
+@startuml SD_08_CreateChallenge - Sequence Diagram: Tạo thách đấu
+
+title Sequence Diagram: Tạo thách đấu (Create Challenge)
+
+actor "Người dùng\n(User)" as User
+participant "Friend Challenge Screen" as ChallengeScreen
+participant "Challenge Template Sheet" as TemplateSheet
+participant "Friend Service" as FriendService
+participant "Challenge Service" as ChallengeService
+participant "Quiz Service" as QuizService
+participant "Mini Game Service" as GameService
+participant "Challenge Exercise Service" as ExerciseService
+participant "Firestore" as Firestore
+participant "Friend User" as Friend
+
+== Main Flow ==
+
+User -> ChallengeScreen: 1. Mở màn hình Friend Challenge
+activate ChallengeScreen
+
+ChallengeScreen -> FriendService: 2. getFriends(userId)
+activate FriendService
+FriendService -> Firestore: 3. Lấy danh sách bạn bè
+activate Firestore
+Firestore --> FriendService: 4. List<UserModel>
+deactivate Firestore
+FriendService --> ChallengeScreen: 5. List friends
+deactivate FriendService
+
+alt Chưa có bạn bè
+    ChallengeScreen -> ChallengeScreen: 6. Hiển thị "Bạn chưa có bạn bè"
+    ChallengeScreen -> ChallengeScreen: 7. Hiển thị button "Mời bạn bè"
+    ChallengeScreen --> User: 8. Hiển thị thông báo
+else Có bạn bè
+    ChallengeScreen -> ChallengeScreen: 6. Hiển thị danh sách bạn bè
+    ChallengeScreen --> User: 7. Hiển thị danh sách bạn bè
+    
+    User -> ChallengeScreen: 8. Chọn bạn bè muốn thách đấu
+    User -> ChallengeScreen: 9. Nhấn "Tạo thách đấu"
+    
+    ChallengeScreen -> TemplateSheet: 10. Mở challenge template sheet
+    activate TemplateSheet
+    
+    TemplateSheet -> TemplateSheet: 11. Hiển thị các loại challenge
+    note right: - Quiz Challenge\n- Mini Game Challenge\n- Challenge Exercise
+    
+    TemplateSheet --> User: 12. Hiển thị options
+    
+    User -> TemplateSheet: 13. Chọn loại challenge
+    
+    alt Chọn Quiz Challenge
+        TemplateSheet -> QuizService: 14. getAvailableQuizzes()
+        activate QuizService
+        QuizService -> Firestore: 15. Lấy danh sách quiz
+        activate Firestore
+        Firestore --> QuizService: 16. List<QuizModel>
+        deactivate Firestore
+        QuizService --> TemplateSheet: 17. List quizzes
+        deactivate QuizService
+        
+        TemplateSheet --> User: 18. Hiển thị danh sách quiz
+        User -> TemplateSheet: 19. Chọn quiz muốn thách đấu
+        TemplateSheet -> TemplateSheet: 20. Lưu quizId vào challengeData
+        
+    else Chọn Mini Game Challenge
+        TemplateSheet -> GameService: 14. getAllGames()
+        activate GameService
+        GameService -> Firestore: 15. Lấy danh sách games
+        activate Firestore
+        Firestore --> GameService: 16. List<MiniGameModel>
+        deactivate Firestore
+        GameService --> TemplateSheet: 17. List games
+        deactivate GameService
+        
+        TemplateSheet --> User: 18. Hiển thị danh sách games
+        User -> TemplateSheet: 19. Chọn game muốn thách đấu
+        TemplateSheet -> TemplateSheet: 20. Lưu gameId vào challengeData
+        
+    else Chọn Challenge Exercise
+        TemplateSheet -> ExerciseService: 14. getAllExercises()
+        activate ExerciseService
+        ExerciseService -> Firestore: 15. Lấy danh sách exercises
+        activate Firestore
+        Firestore --> ExerciseService: 16. List<ChallengeExerciseModel>
+        deactivate Firestore
+        ExerciseService --> TemplateSheet: 17. List exercises
+        deactivate ExerciseService
+        
+        TemplateSheet --> User: 18. Hiển thị danh sách exercises
+        User -> TemplateSheet: 19. Chọn exercise muốn thách đấu
+        TemplateSheet -> TemplateSheet: 20. Lưu exerciseId vào challengeData
+    end
+    
+    User -> TemplateSheet: 21. Nhập thời hạn (deadline)
+    TemplateSheet -> TemplateSheet: 22. Validate deadline
+    note right: Deadline phải trong tương lai
+    
+    alt Deadline không hợp lệ
+        TemplateSheet --> User: 23. Hiển thị lỗi "Thời hạn không hợp lệ"
+    else Deadline hợp lệ
+        User -> TemplateSheet: 24. (Tùy chọn) Nhập message
+        User -> TemplateSheet: 25. Nhấn "Gửi thách đấu"
+        
+        TemplateSheet -> ChallengeService: 26. createChallenge(\n  challengerId, challengerName,\n  opponentId, opponentName,\n  challengeType, metadata, ttl)
+        activate ChallengeService
+        
+        ChallengeService -> ChallengeService: 27. Tính toán expiresAt
+        note right: expiresAt = now + ttl (default 3 days)
+        
+        ChallengeService -> Firestore: 28. Tạo challenge document
+        activate Firestore
+        note right: challenges/{challengeId}\n  - challengerId\n  - challengerName\n  - opponentId\n  - opponentName\n  - challengeType\n  - status: 'pending'\n  - createdAt\n  - updatedAt\n  - expiresAt\n  - metadata: {quizId/gameId/exerciseId}\n  - participants: [challengerId, opponentId]
+        Firestore --> ChallengeService: 29. ChallengeModel
+        deactivate Firestore
+        
+        ChallengeService -> Firestore: 30. (Tùy chọn) Gửi notification
+        activate Firestore
+        note right: notifications/{notificationId}\n  - userId: opponentId\n  - type: 'challenge'\n  - challengeId\n  - message\n  - createdAt
+        Firestore --> ChallengeService: 31. Success
+        deactivate Firestore
+        
+        ChallengeService --> TemplateSheet: 32. Success
+        deactivate ChallengeService
+        
+        TemplateSheet -> TemplateSheet: 33. Hiển thị thông báo thành công
+        note right: "Thách đấu đã được gửi!"
+        
+        TemplateSheet -> ChallengeScreen: 34. Đóng template sheet
+        deactivate TemplateSheet
+        
+        ChallengeScreen -> ChallengeScreen: 35. Refresh danh sách challenges
+        ChallengeScreen -> ChallengeService: 36. watchChallenges(userId)
+        activate ChallengeService
+        ChallengeService -> Firestore: 37. Stream challenges
+        activate Firestore
+        note right: Stream challenges where:\n  participants array-contains userId\n  status == 'pending'
+        Firestore --> ChallengeService: 38. Stream<ChallengeModel>
+        deactivate Firestore
+        ChallengeService --> ChallengeScreen: 39. Stream challenges
+        deactivate ChallengeService
+        
+        ChallengeScreen -> ChallengeScreen: 40. Hiển thị challenge mới trong "Đã gửi"
+        ChallengeScreen --> User: 41. Cập nhật UI
+    end
+end
+
+deactivate ChallengeScreen
+
+== Alternative Flows ==
+
+== A1: Friend chấp nhận challenge ==
+Friend -> ChallengeScreen: Mở màn hình Friend Challenge
+ChallengeScreen -> ChallengeService: watchChallenges(friendId)
+ChallengeService -> Firestore: Stream challenges
+Firestore --> ChallengeService: Stream includes pending challenge
+ChallengeService --> ChallengeScreen: Stream challenges
+ChallengeScreen --> Friend: Hiển thị challenge mới trong "Đã nhận"
+
+Friend -> ChallengeScreen: Nhấn "Chấp nhận"
+ChallengeScreen -> ChallengeService: acceptChallenge(challengeId)
+ChallengeService -> Firestore: Update status = 'accepted'
+Firestore --> ChallengeService: Success
+ChallengeService -> ChallengeScreen: Navigate to Quiz/Game Screen
+ChallengeScreen --> Friend: Hiển thị màn hình làm bài
+
+== A2: Friend từ chối challenge ==
+Friend -> ChallengeScreen: Nhấn "Từ chối"
+ChallengeScreen -> ChallengeService: rejectChallenge(challengeId)
+ChallengeService -> Firestore: Update status = 'rejected'
+Firestore --> ChallengeService: Success
+ChallengeService --> ChallengeScreen: Success
+ChallengeScreen -> ChallengeScreen: Remove challenge from list
+ChallengeScreen --> Friend: Cập nhật UI
+
+== A3: Challenge hết hạn ==
+ChallengeService -> Firestore: Kiểm tra expiresAt < now
+Firestore --> ChallengeService: Challenge đã hết hạn
+ChallengeService -> Firestore: Update status = 'expired'
+Firestore --> ChallengeService: Success
+ChallengeService --> ChallengeScreen: Challenge expired
+ChallengeScreen --> User: Hiển thị "Thách đấu đã hết hạn"
+
+@enduml

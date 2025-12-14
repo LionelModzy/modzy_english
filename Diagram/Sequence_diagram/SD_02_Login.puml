@@ -1,0 +1,175 @@
+@startuml SD_02_Login - Sequence Diagram: Đăng nhập
+
+title Sequence Diagram: Đăng nhập (Login)
+
+actor "Người dùng\n(User)" as User
+participant "Login Screen" as LoginScreen
+participant "Preferences Service" as PrefService
+participant "Auth Repository" as AuthRepo
+participant "Firebase Service" as FirebaseService
+participant "Firebase Auth" as FirebaseAuth
+participant "Firestore" as Firestore
+participant "Home Screen" as HomeScreen
+
+== Main Flow ==
+
+User -> LoginScreen: 1. Mở màn hình đăng nhập
+activate LoginScreen
+
+LoginScreen -> PrefService: 2. getRememberMe()
+activate PrefService
+PrefService --> LoginScreen: 3. rememberMe = true/false
+deactivate PrefService
+
+alt Remember Me = true
+    LoginScreen -> PrefService: 4. getSavedCredentials()
+    activate PrefService
+    PrefService --> LoginScreen: 5. {email, password}
+    deactivate PrefService
+    LoginScreen -> LoginScreen: 6. Tự động điền email và mật khẩu
+else Remember Me = false
+    LoginScreen -> LoginScreen: 7. Hiển thị form trống
+end
+
+LoginScreen --> User: 8. Hiển thị form đăng nhập
+
+User -> LoginScreen: 9. Nhập email
+User -> LoginScreen: 10. Nhập mật khẩu
+
+alt Người dùng chọn "Ghi nhớ đăng nhập"
+    User -> LoginScreen: 11. Chọn checkbox "Remember Me"
+    LoginScreen -> LoginScreen: 12. Đánh dấu rememberMe = true
+end
+
+User -> LoginScreen: 13. Nhấn nút "Đăng nhập"
+
+LoginScreen -> LoginScreen: 14. Validate dữ liệu đầu vào
+note right: - Email hợp lệ\n- Mật khẩu không rỗng
+
+alt Dữ liệu hợp lệ
+    alt Remember Me = true
+        LoginScreen -> PrefService: 15. setRememberMe(true)
+        activate PrefService
+        LoginScreen -> PrefService: 16. saveCredentials(email, password)
+        PrefService --> LoginScreen: 17. Success
+        deactivate PrefService
+    else Remember Me = false
+        LoginScreen -> PrefService: 15. clearCredentials()
+        activate PrefService
+        PrefService --> LoginScreen: 16. Success
+        deactivate PrefService
+    end
+    
+    LoginScreen -> AuthRepo: 17. signInWithEmailAndPassword(\n  email, password)
+    activate AuthRepo
+    
+    AuthRepo -> FirebaseService: 18. signInWithEmailAndPassword(\n  email, password)
+    activate FirebaseService
+    
+    FirebaseService -> FirebaseAuth: 19. signInWithEmailAndPassword()
+    activate FirebaseAuth
+    
+    alt Đăng nhập thành công
+        FirebaseAuth --> FirebaseService: 20. UserCredential
+        deactivate FirebaseAuth
+        
+        FirebaseService --> AuthRepo: 21. UserCredential
+        deactivate FirebaseService
+        
+        AuthRepo -> FirebaseService: 22. getUserDocument(uid)
+        activate FirebaseService
+        FirebaseService -> Firestore: 23. Lấy document từ collection 'users'
+        activate Firestore
+        Firestore --> FirebaseService: 24. UserDocument
+        deactivate Firestore
+        FirebaseService --> AuthRepo: 25. UserDocument
+        deactivate FirebaseService
+        
+        AuthRepo -> AuthRepo: 26. Parse UserModel từ Firestore
+        
+        AuthRepo -> AuthRepo: 27. Kiểm tra isActive
+        
+        alt Tài khoản bị vô hiệu hóa
+            AuthRepo -> FirebaseService: 28. signOut()
+            activate FirebaseService
+            FirebaseService -> FirebaseAuth: 29. signOut()
+            activate FirebaseAuth
+            FirebaseAuth --> FirebaseService: 30. Success
+            deactivate FirebaseAuth
+            FirebaseService --> AuthRepo: 31. Success
+            deactivate FirebaseService
+            AuthRepo --> LoginScreen: 32. Error: Tài khoản đã bị tạm dừng
+            deactivate AuthRepo
+            LoginScreen --> User: 33. Hiển thị lỗi "Tài khoản của bạn đã bị tạm dừng"
+        else Tài khoản hoạt động bình thường
+            AuthRepo -> FirebaseService: 28. updateUserDocument(\n  uid, {lastLoginAt: now})
+            activate FirebaseService
+            FirebaseService -> Firestore: 29. Cập nhật lastLoginAt
+            activate Firestore
+            Firestore --> FirebaseService: 30. Success
+            deactivate Firestore
+            FirebaseService --> AuthRepo: 31. Success
+            deactivate FirebaseService
+            
+            AuthRepo --> LoginScreen: 32. Success + UserModel
+            deactivate AuthRepo
+            
+            LoginScreen -> HomeScreen: 33. Navigate to HomeScreen
+            activate HomeScreen
+            
+            HomeScreen -> HomeScreen: 34. Load thông tin user và tiến độ
+            HomeScreen -> Firestore: 35. Lấy progress data
+            activate Firestore
+            Firestore --> HomeScreen: 36. Progress data
+            deactivate Firestore
+            
+            HomeScreen --> User: 37. Hiển thị màn hình chính với thông tin user
+            
+        end
+        
+    else Email/Mật khẩu sai
+        FirebaseAuth --> FirebaseService: 20. Error: Invalid credentials
+        deactivate FirebaseAuth
+        FirebaseService --> AuthRepo: 21. Error: Invalid email or password
+        deactivate FirebaseService
+        AuthRepo --> LoginScreen: 32. Error: Email hoặc mật khẩu không đúng
+        deactivate AuthRepo
+        LoginScreen --> User: 33. Hiển thị lỗi "Email hoặc mật khẩu không đúng"
+        
+    else Lỗi khác
+        FirebaseAuth --> FirebaseService: 20. Error: Other error
+        deactivate FirebaseAuth
+        FirebaseService --> AuthRepo: 21. Error message
+        deactivate FirebaseService
+        AuthRepo --> LoginScreen: 32. Error message
+        deactivate AuthRepo
+        LoginScreen --> User: 33. Hiển thị lỗi
+    end
+    
+else Dữ liệu không hợp lệ
+    LoginScreen --> User: 17. Hiển thị lỗi validation
+    note right: - Email không đúng định dạng\n- Mật khẩu rỗng
+end
+
+deactivate LoginScreen
+deactivate HomeScreen
+
+== Alternative Flows ==
+
+== A1: Người dùng quên mật khẩu ==
+User -> LoginScreen: Nhấn "Quên mật khẩu?"
+LoginScreen -> LoginScreen: Navigate to ForgotPasswordScreen
+LoginScreen --> User: Hiển thị màn hình quên mật khẩu
+
+== A2: Người dùng chưa có tài khoản ==
+User -> LoginScreen: Nhấn "Đăng ký"
+LoginScreen -> LoginScreen: Navigate to RegisterScreen
+LoginScreen --> User: Hiển thị màn hình đăng ký
+
+== A3: Kết nối mạng lỗi ==
+FirebaseAuth --> FirebaseService: Error: Network error
+FirebaseService --> AuthRepo: Error: Không có kết nối mạng
+AuthRepo --> LoginScreen: Error: Network error
+LoginScreen --> User: Hiển thị lỗi "Vui lòng kiểm tra kết nối mạng"
+
+@enduml

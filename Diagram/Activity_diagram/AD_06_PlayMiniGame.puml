@@ -1,0 +1,172 @@
+@startuml AD_06_PlayMiniGame - Activity Diagram: Chơi mini game
+
+title Activity Diagram: Chơi mini game (Play Mini Game)
+
+start
+
+:Người dùng mở màn hình mini games;
+
+:Lấy danh sách games từ Firestore;
+
+:Hiển thị danh sách games;
+note right
+  - Word Match Game
+  - Word Scramble Game
+  - Word Search Game
+end note
+
+:Người dùng chọn loại game muốn chơi;
+
+:Lấy thông tin game từ Firestore;
+
+:Khởi tạo game;
+note right
+  - Load vocabulary words
+  - Setup game board
+  - Initialize timer
+  - Initialize score = 0
+  - Initialize moves = 0
+end note
+
+if (Game type: Word Match?) then (Có)
+  :Tạo bảng game với các cặp thẻ;
+  note right
+    - 12 thẻ (6 cặp)
+    - Mỗi thẻ có từ tiếng Anh hoặc nghĩa tiếng Việt
+    - Thẻ được xáo trộn
+  end note
+
+  repeat
+    :Người dùng lật thẻ thứ nhất;
+    :Hiển thị nội dung thẻ;
+    :Moves++;
+
+    :Người dùng lật thẻ thứ hai;
+    :Hiển thị nội dung thẻ;
+    :Moves++;
+
+    :Kiểm tra khớp;
+
+    if (Hai thẻ khớp?) then (Có)
+      :Giữ thẻ mở + Score += 100;
+      :Hiển thị animation "Match!";
+      :MatchedPairs++;
+    else (Không khớp)
+      :Đợi 1 giây rồi lật lại;
+      :Hiển thị animation "Try again";
+    endif
+
+  repeat while (Chưa tìm hết cặp?) is (Có)
+  -> Đã tìm hết cặp;
+
+elseif (Game type: Word Scramble?) then (Có)
+  :Hiển thị từ đã xáo trộn;
+  :Hiển thị gợi ý (nghĩa tiếng Việt);
+
+  repeat
+    :Người dùng sắp xếp lại các chữ cái;
+
+    :Kiểm tra từ đã tạo;
+
+    if (Từ đúng?) then (Có)
+      :Score += 200 + time bonus;
+      :Chuyển đến từ tiếp theo;
+    else (Sai)
+      :Hiển thị "Sai rồi, thử lại";
+    endif
+
+  repeat while (Chưa đoán đúng hoặc chưa hết thời gian?) is (Có)
+  -> Đã đoán đúng hoặc hết thời gian;
+
+else (Game type: Word Search)
+  :Hiển thị lưới chữ cái;
+  :Hiển thị danh sách từ cần tìm;
+
+  repeat
+    :Người dùng kéo để chọn các ô chữ cái;
+    :Highlight các ô đã chọn;
+    :Kiểm tra từ đã chọn;
+
+    if (Từ đúng?) then (Có)
+      :Score += 150;
+      :Đánh dấu từ đã tìm thấy;
+      :Gạch bỏ từ trong danh sách;
+    else (Sai)
+      :Bỏ highlight;
+    endif
+
+  repeat while (Chưa tìm hết từ hoặc chưa hết thời gian?) is (Có)
+  -> Đã tìm hết từ hoặc hết thời gian;
+endif
+
+:Game kết thúc;
+note right
+  - Hết thời gian
+  - Hoàn thành tất cả từ/cặp
+  - Người dùng nhấn "Kết thúc"
+end note
+
+:Tính điểm cuối cùng;
+note right
+  - Base score
+  - Time bonus
+  - Moves penalty
+end note
+
+:Hiển thị kết quả;
+note right
+  - Final score
+  - Time used
+  - Moves (nếu có)
+  - Accuracy
+  - Rating (Excellent/Good/Fair)
+end note
+
+:Lưu score vào gameScores collection;
+note right
+  - gameId
+  - userId
+  - score
+  - time
+  - moves
+  - completedAt
+  - accuracy
+end note
+
+:Cập nhật game statistics;
+note right
+  - totalPlays++
+  - averageScore
+  - bestScore (nếu score > bestScore)
+end note
+
+:Update leaderboard;
+
+if (Đạt điểm cao mới?) then (Có)
+  :Cập nhật bestScore;
+  :Hiển thị animation đặc biệt;
+  :Thông báo "Kỷ lục mới!";
+endif
+
+:Hiển thị options;
+note right
+  - "Chơi lại"
+  - "Chơi game khác"
+  - "Xem leaderboard"
+  - "Quay về menu"
+end note
+
+if (Người dùng chọn "Chơi lại"?) then (Có)
+  :Reset game;
+  :Bắt đầu lại từ đầu;
+elseif (Người dùng chọn "Xem leaderboard"?) then (Có)
+  :Lấy top scores;
+  :Hiển thị bảng xếp hạng;
+else (Quay về menu)
+  :Quay về menu;
+endif
+
+stop
+
+@enduml
+

@@ -5,7 +5,7 @@ class UserModel {
   final String email;
   final String displayName;
   final String? profileImageUrl;
-  final String role; // 'user' or 'admin'
+  final String role; // 'user', 'teacher', or 'admin'
   final DateTime createdAt;
   final DateTime? lastLoginAt;
   final bool isActive;
@@ -141,8 +141,14 @@ class UserModel {
   // Check if user is admin
   bool get isAdmin => role == 'admin';
 
+  // Check if user is teacher
+  bool get isTeacher => role == 'teacher';
+
   // Check if user is regular user
   bool get isUser => role == 'user';
+
+  // Check if user can manage content (admin or teacher)
+  bool get canManageContent => isAdmin || isTeacher;
 
   // Get user level name
   String get levelName {

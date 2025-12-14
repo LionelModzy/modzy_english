@@ -1,0 +1,103 @@
+@startuml AD_LuyenTapTuVung - Activity Diagram: Luyện tập từ vựng
+
+title Activity Diagram: Luyện tập từ vựng
+
+start
+
+:Học viên mở danh sách từ vựng;
+
+if (Chọn từ danh sách?) then (Có)
+  :Chọn từ vựng muốn luyện tập;
+else (Chọn từ bookmark)
+  :Mở tab "Đã đánh dấu";
+  :Chọn từ vựng đã bookmark;
+endif
+
+:Hệ thống tải thông tin từ vựng;
+
+:Hiển thị chế độ luyện tập;
+note right
+  - Flashcard (Thẻ từ)
+  - Trắc nghiệm (Multiple Choice)
+  - Điền từ (Typing)
+  - Nghe và chọn (Listening)
+end note
+
+:Học viên chọn chế độ luyện tập;
+
+if (Chế độ: Flashcard?) then (Có)
+  :Hiển thị thẻ từ với từ tiếng Anh;
+  :Học viên nhấn để xem nghĩa;
+  :Hiển thị nghĩa tiếng Việt;
+  :Học viên đánh dấu đúng/sai;
+else (Chế độ: Trắc nghiệm)
+  :Hệ thống tạo 4 lựa chọn (1 đúng + 3 sai);
+  :Hiển thị câu hỏi và các lựa chọn;
+  :Học viên chọn đáp án;
+  :Kiểm tra đáp án;
+else (Chế độ: Điền từ)
+  :Hiển thị nghĩa và ô nhập;
+  :Học viên nhập từ tiếng Anh;
+  :So sánh với từ đúng;
+else (Chế độ: Nghe và chọn)
+  :Phát âm từ vựng (text-to-speech);
+  :Hiển thị 4 lựa chọn nghĩa;
+  :Học viên chọn nghĩa phù hợp;
+  :Kiểm tra đáp án;
+endif
+
+if (Đáp án đúng?) then (Có)
+  :Hiển thị "Đúng!" với animation;
+  :Cộng điểm;
+else (Sai)
+  :Hiển thị "Sai!" và đáp án đúng;
+  :Hiển thị giải thích;
+endif
+
+if (Còn từ vựng khác?) then (Có)
+  :Chuyển đến từ vựng tiếp theo;
+  -> Quay lại chọn chế độ;
+else (Hết từ vựng)
+  :Tính toán kết quả;
+  note right
+    - Tổng số từ: X
+    - Số câu đúng: Y
+    - Độ chính xác: Z%
+    - Thời gian: T phút
+  end note
+  
+  :Hiển thị kết quả luyện tập;
+  
+  :Lưu tiến độ vào cơ sở dữ liệu;
+  note right
+    - vocabularyId
+    - userId
+    - correctAnswers
+    - accuracy
+    - timeSpent
+    - practiceType
+  end note
+  
+  :Cập nhật thống kê học tập;
+  note right
+    - totalVocabularyPracticed++
+    - Cập nhật progressPercentage
+  end note
+  
+  if (Học viên muốn đánh dấu?) then (Có)
+    :Thêm vào danh sách bookmark;
+    :Cập nhật icon bookmark;
+  endif
+  
+  if (Học viên muốn luyện tập lại?) then (Có)
+    :Reset session;
+    -> Quay lại chọn chế độ;
+  else (Hoàn thành)
+    :Quay về danh sách từ vựng;
+  endif
+endif
+
+stop
+
+@enduml
+

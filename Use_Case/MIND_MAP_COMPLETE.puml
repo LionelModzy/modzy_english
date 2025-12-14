@@ -1,0 +1,197 @@
+@startmindmap Modzy English - Mind Map (Complete)
+skinparam monochrome false
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 11
+
+<style>
+mindmapDiagram {
+  .user {
+    BackgroundColor #E3F2FD
+    LineColor #1976D2
+  }
+  .teacher {
+    BackgroundColor #FFF3E0
+    LineColor #D79B00
+  }
+  .admin {
+    BackgroundColor #FFEBEE
+    LineColor #B85450
+  }
+  .auth {
+    BackgroundColor #FFF9C4
+  }
+  .profile {
+    BackgroundColor #E1F5FE
+  }
+  .lessons {
+    BackgroundColor #C8E6C9
+  }
+  .vocab {
+    BackgroundColor #DCEDC8
+  }
+  .quiz {
+    BackgroundColor #F1F8E9
+  }
+  .videos {
+    BackgroundColor #FFE0B2
+  }
+  .games {
+    BackgroundColor #F8BBD9
+  }
+  .social {
+    BackgroundColor #E1BEE7
+  }
+  .leaderboard {
+    BackgroundColor #D1C4E9
+  }
+  .content_mgmt {
+    BackgroundColor #BBDEFB
+  }
+  .user_mgmt {
+    BackgroundColor #F8BBD0
+  }
+  .analytics {
+    BackgroundColor #C5CAE9
+  }
+  .media {
+    BackgroundColor #B2DFDB
+  }
+}
+</style>
+
+* Modzy English App
+** User <<user>>
+*** Authentication & Account <<auth>>
+**** Đăng ký (Register)
+**** Đăng nhập (Login)
+**** Đăng xuất (Logout)
+**** Quên mật khẩu (Forgot password)
+**** Đặt lại mật khẩu (Reset password)
+**** Ghi nhớ đăng nhập (Remember me)
+*** Profile & Settings <<profile>>
+**** Xem hồ sơ cá nhân (View profile)
+**** Chỉnh sửa hồ sơ (Edit profile)
+**** Tải ảnh đại diện (Upload avatar)
+**** Xem lịch sử học tập (Learning history)
+**** Xem yêu thích (Favorites)
+**** Quản lý cài đặt (Settings)
+**** Xem trợ giúp (Help & Support)
+*** Lessons <<lessons>>
+**** Duyệt danh sách bài học (Browse lessons)
+**** Tìm kiếm bài học (Search lessons)
+**** Lọc bài học (Filter lessons)
+**** Xem chi tiết bài học (View lesson detail)
+**** Phát video bài học (Play lesson video)
+**** Phát audio bài học (Play lesson audio)
+**** Hoàn thành bài học (Complete lesson)
+**** Thêm vào yêu thích (Add to favorites)
+**** Xem tiến độ bài học (View lesson progress)
+*** Vocabulary <<vocab>>
+**** Duyệt danh sách từ vựng (Browse vocabulary)
+**** Tìm kiếm từ vựng (Search vocabulary)
+**** Lọc từ vựng (Filter vocabulary)
+**** Xem chi tiết từ vựng (View vocabulary detail)
+**** Ôn tập Flashcard (Flashcard review)
+**** Luyện tập từ vựng (Practice vocabulary)
+**** Nghe phát âm (Listen pronunciation)
+**** Đánh dấu từ vựng (Bookmark vocabulary)
+**** Thêm vào yêu thích (Add to favorites)
+*** Quiz <<quiz>>
+**** Duyệt danh sách quiz (Browse quizzes)
+**** Tìm kiếm quiz (Search quizzes)
+**** Lọc quiz (Filter quizzes)
+**** Làm bài quiz (Take quiz)
+**** Xem kết quả quiz (View quiz results)
+**** Xem thống kê quiz (View quiz statistics)
+*** Videos <<videos>>
+**** Xem danh sách video (Browse videos)
+**** Phát video (Play video)
+**** Thêm video yêu thích (Add video to favorites)
+*** Mini Games <<games>>
+**** Xem danh sách mini games (Browse mini games)
+**** Chơi Word Match Game (Play Word Match)
+**** Chơi Word Scramble Game (Play Word Scramble)
+**** Chơi Word Search Game (Play Word Search)
+**** Xem điểm số game (View game score)
+**** Xem lịch sử chơi game (View game history)
+*** Social Features <<social>>
+**** Gửi lời mời kết bạn (Send friend request)
+**** Chấp nhận lời mời (Accept friend request)
+**** Từ chối lời mời (Reject friend request)
+**** Xem danh sách bạn bè (View friends list)
+**** Xóa bạn bè (Remove friend)
+**** Tạo thách đấu (Create challenge)
+**** Chấp nhận thách đấu (Accept challenge)
+**** Hoàn thành thách đấu (Complete challenge)
+**** Xem kết quả thách đấu (View challenge results)
+*** Leaderboard <<leaderboard>>
+**** Xem bảng xếp hạng (View leaderboard)
+**** Xếp hạng theo điểm (Score ranking)
+**** Xếp hạng theo level (Level ranking)
+** Teacher <<teacher>>
+*** Teacher Dashboard <<analytics>>
+**** Xem bảng điều khiển (View dashboard)
+**** Xem thống kê nội dung (View content statistics)
+*** Content Management <<content_mgmt>>
+**** Quản lý Bài học (Lesson Management)
+***** Tạo bài học (Create lesson)
+***** Sửa bài học (Edit lesson)
+**** Quản lý Từ vựng (Vocabulary Management)
+***** Tạo từ vựng (Create vocabulary)
+***** Sửa từ vựng (Edit vocabulary)
+**** Quản lý Quiz (Quiz Management)
+***** Tạo quiz (Create quiz)
+***** Sửa quiz (Edit quiz)
+**** Quản lý Mini Games (Mini Game Management)
+***** Tạo mini game (Create mini game)
+***** Sửa mini game (Edit mini game)
+**** Quản lý Challenge Exercises (Challenge Management)
+***** Tạo bài tập challenge (Create challenge exercise)
+***** Sửa bài tập challenge (Edit challenge exercise)
+*** Media Management <<media>>
+**** Upload Media (Upload media files)
+** Admin <<admin>>
+*** Admin Dashboard <<analytics>>
+**** Xem bảng điều khiển (View admin dashboard)
+**** Xem thống kê nền tảng (View platform statistics)
+*** User Management <<user_mgmt>>
+**** Xem danh sách người dùng (View users list)
+**** Tìm kiếm người dùng (Search users)
+**** Chỉnh sửa thông tin người dùng (Edit user info)
+**** Vô hiệu hóa người dùng (Deactivate user)
+**** Kích hoạt người dùng (Activate user)
+**** Thay đổi vai trò (Change user role)
+*** Content Management <<content_mgmt>>
+**** Quản lý Bài học (Lesson Management)
+***** Tạo bài học (Create lesson)
+***** Sửa bài học (Edit lesson)
+***** Xóa bài học (Delete lesson)
+***** Kích hoạt/Vô hiệu hóa (Toggle lesson status)
+**** Quản lý Từ vựng (Vocabulary Management)
+***** Tạo từ vựng (Create vocabulary)
+***** Sửa từ vựng (Edit vocabulary)
+***** Xóa từ vựng (Delete vocabulary)
+***** Tải lên phát âm (Upload pronunciation)
+**** Quản lý Quiz (Quiz Management)
+***** Tạo quiz (Create quiz)
+***** Sửa quiz (Edit quiz)
+***** Xóa quiz (Delete quiz)
+***** Xem thống kê quiz (View quiz statistics)
+**** Quản lý Mini Games (Mini Game Management)
+***** Tạo mini game (Create mini game)
+***** Sửa mini game (Edit mini game)
+***** Xóa mini game (Delete mini game)
+***** Xem thống kê game (View game statistics)
+**** Quản lý Challenge Exercises (Challenge Management)
+***** Tạo bài tập challenge (Create challenge exercise)
+***** Sửa bài tập challenge (Edit challenge exercise)
+***** Xóa bài tập challenge (Delete challenge exercise)
+*** Analytics & Reports <<analytics>>
+**** Xem phân tích người dùng (View user analytics)
+**** Xem phân tích nội dung (View content analytics)
+**** Xem báo cáo tiến độ (View progress reports)
+*** Media Management <<media>>
+**** Tải lên media (Upload media)
+**** Quản lý thư viện media (Manage media library)
+@endmindmap
+

@@ -1,0 +1,127 @@
+@startuml UC_02_Login - Đăng nhập
+
+title Use Case: Đăng nhập (Login)
+
+actor "Người dùng\n(User)" as User
+participant "Login Screen" as LoginScreen
+participant "Auth Repository" as AuthRepo
+participant "Firebase Auth" as FirebaseAuth
+participant "Firestore" as Firestore
+participant "Preferences Service" as PrefService
+participant "Home Screen" as HomeScreen
+
+== Main Flow ==
+
+User -> LoginScreen: 1. Mở màn hình đăng nhập
+activate LoginScreen
+
+User -> LoginScreen: 2. Nhập email
+User -> LoginScreen: 3. Nhập mật khẩu
+User -> LoginScreen: 4. (Tùy chọn) Chọn "Ghi nhớ đăng nhập"
+User -> LoginScreen: 5. Nhấn nút "Đăng nhập"
+
+LoginScreen -> LoginScreen: 6. Validate dữ liệu đầu vào
+note right: - Email không rỗng\n- Mật khẩu không rỗng
+
+alt Dữ liệu hợp lệ
+    LoginScreen -> AuthRepo: 7. signInWithEmail(email, password)
+    activate AuthRepo
+    
+    AuthRepo -> FirebaseAuth: 8. signInWithEmailAndPassword()
+    activate FirebaseAuth
+    
+    alt Đăng nhập thành công
+        FirebaseAuth --> AuthRepo: 9. UserCredential
+        deactivate FirebaseAuth
+        
+        AuthRepo -> Firestore: 10. Lấy thông tin user từ Firestore
+        activate Firestore
+        Firestore --> AuthRepo: 11. UserModel
+        deactivate Firestore
+        
+        AuthRepo -> Firestore: 12. Cập nhật lastLoginAt
+        activate Firestore
+        Firestore --> AuthRepo: 13. Success
+        deactivate Firestore
+        
+        alt Người dùng chọn "Ghi nhớ đăng nhập"
+            AuthRepo -> PrefService: 14. Lưu thông tin đăng nhập
+            activate PrefService
+            note right: - Email\n- Remember me: true
+            PrefService --> AuthRepo: 15. Success
+            deactivate PrefService
+        else Người dùng không chọn "Ghi nhớ"
+            AuthRepo -> PrefService: 14. Xóa thông tin đăng nhập đã lưu
+            activate PrefService
+            PrefService --> AuthRepo: 15. Success
+            deactivate PrefService
+        end
+        
+        AuthRepo --> LoginScreen: 16. Success + UserModel
+        deactivate AuthRepo
+        
+        LoginScreen -> HomeScreen: 17. Chuyển đến HomeScreen
+        activate HomeScreen
+        HomeScreen -> HomeScreen: 18. Load thông tin user và tiến độ
+        HomeScreen --> User: 19. Hiển thị màn hình chính
+        deactivate HomeScreen
+    else Email/Mật khẩu sai
+        FirebaseAuth --> AuthRepo: 9. Error: Invalid credentials
+        deactivate FirebaseAuth
+        AuthRepo --> LoginScreen: 16. Error: Email hoặc mật khẩu không đúng
+        deactivate AuthRepo
+        LoginScreen --> User: 17. Hiển thị lỗi "Email hoặc mật khẩu không đúng"
+    else Tài khoản bị vô hiệu hóa
+        FirebaseAuth --> AuthRepo: 9. Error: User disabled
+        deactivate FirebaseAuth
+        AuthRepo --> LoginScreen: 16. Error: Tài khoản đã bị vô hiệu hóa
+        deactivate AuthRepo
+        LoginScreen --> User: 17. Hiển thị lỗi "Tài khoản của bạn đã bị vô hiệu hóa"
+    end
+else Dữ liệu không hợp lệ
+    LoginScreen --> User: 7. Hiển thị lỗi validation
+end
+
+deactivate LoginScreen
+
+== Alternative Flows ==
+
+== A1: Người dùng quên mật khẩu ==
+User -> LoginScreen: Nhấn "Quên mật khẩu?"
+LoginScreen -> LoginScreen: Chuyển đến màn hình Forgot Password
+LoginScreen --> User: Hiển thị màn hình quên mật khẩu
+
+== A2: Người dùng chưa có tài khoản ==
+User -> LoginScreen: Nhấn "Đăng ký"
+LoginScreen -> LoginScreen: Chuyển đến màn hình đăng ký
+LoginScreen --> User: Hiển thị màn hình đăng ký
+
+== A3: Kết nối mạng lỗi ==
+FirebaseAuth --> AuthRepo: Error: Network error
+AuthRepo --> LoginScreen: Error: Không có kết nối mạng
+LoginScreen --> User: Hiển thị lỗi "Vui lòng kiểm tra kết nối mạng"
+
+== A4: Tài khoản chưa được xác thực email ==
+FirebaseAuth --> AuthRepo: Error: Email not verified
+AuthRepo --> LoginScreen: Warning: Email chưa được xác thực
+LoginScreen --> User: Hiển thị cảnh báo "Vui lòng xác thực email"
+
+== A5: Đăng nhập tự động (Remember Me) ==
+User -> LoginScreen: Mở ứng dụng
+LoginScreen -> PrefService: Kiểm tra Remember Me
+activate PrefService
+PrefService --> LoginScreen: Có thông tin đăng nhập đã lưu
+deactivate PrefService
+LoginScreen -> AuthRepo: Đăng nhập tự động với thông tin đã lưu
+activate AuthRepo
+AuthRepo -> FirebaseAuth: signInWithEmailAndPassword()
+activate FirebaseAuth
+FirebaseAuth --> AuthRepo: Success
+deactivate FirebaseAuth
+AuthRepo --> LoginScreen: Success
+deactivate AuthRepo
+LoginScreen -> HomeScreen: Chuyển đến HomeScreen
+HomeScreen --> User: Hiển thị màn hình chính
+
+@enduml
+

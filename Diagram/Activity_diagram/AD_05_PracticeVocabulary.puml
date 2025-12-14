@@ -1,0 +1,110 @@
+@startuml AD_05_PracticeVocabulary - Activity Diagram: Luyện tập từ vựng
+
+title Activity Diagram: Luyện tập từ vựng (Practice Vocabulary)
+
+start
+
+:Người dùng duyệt danh sách từ vựng;
+
+if (Chọn từ vocabulary list?) then (Có)
+  :Nhấn "Luyện tập" trên vocabulary card;
+else (Chọn từ bookmark)
+  :Mở tab "Bookmark";
+  :Chọn từ vựng đã bookmark;
+endif
+
+:Lấy thông tin từ vựng từ Firestore;
+
+:Hiển thị từ vựng;
+note right
+  - Word (từ tiếng Anh)
+  - Meaning (nghĩa tiếng Việt)
+  - Example (ví dụ)
+  - Image (hình ảnh)
+  - Category
+  - Difficulty
+end note
+
+if (Người dùng muốn nghe phát âm?) then (Có)
+  :Phát âm từ vựng;
+  note right
+    Sử dụng text-to-speech API
+  end note
+endif
+
+:Hiển thị example sentence;
+
+:Hiển thị bài tập luyện tập;
+note right
+  Các loại bài tập:
+  - Điền từ vào chỗ trống
+  - Chọn nghĩa đúng
+  - Sắp xếp từ thành câu
+  - Nghe và viết lại
+end note
+
+repeat
+  :Người dùng làm bài tập;
+
+  :Người dùng nhấn "Kiểm tra";
+
+  :Kiểm tra đáp án;
+
+  if (Đáp án đúng?) then (Có)
+    :Hiển thị "Đúng!" + animation;
+    :Cộng điểm;
+  else (Sai)
+    :Hiển thị "Sai!" + đáp án đúng;
+    :Hiển thị giải thích;
+  endif
+
+repeat while (Còn bài tập?) is (Có)
+-> Không còn bài tập;
+
+:Tính điểm tổng;
+
+:Hiển thị kết quả;
+note right
+  - Tổng điểm
+  - Số câu đúng/tổng số câu
+  - Thời gian luyện tập
+end note
+
+:Kiểm tra từ vựng đã học chưa;
+
+if (Đã học trước đó?) then (Có)
+  :Hiển thị "Bạn đã học từ vựng này";
+  :Option "Luyện tập lại" hoặc "Xem kết quả trước";
+else (Chưa)
+  :Thêm vào learnedVocabulary;
+  note right
+    - vocabularyId
+    - userId
+    - learnedAt
+    - score
+    - attempts
+  end note
+
+  :Cập nhật user stats;
+  note right
+    - totalVocabularyLearned++
+    - Cập nhật progressPercentage
+  end note
+
+  :Hiển thị thông báo thành công;
+  note right
+    "Chúc mừng! Bạn đã học từ vựng này"
+  end note
+endif
+
+if (Người dùng muốn bookmark?) then (Có)
+  :Thêm vào bookmarks collection;
+  :Cập nhật icon bookmark;
+endif
+
+:Quay về danh sách từ vựng;
+
+stop
+
+@enduml
+

@@ -1,0 +1,171 @@
+@startuml SD_04_TakeQuiz - Sequence Diagram: Làm bài kiểm tra
+
+title Sequence Diagram: Làm bài kiểm tra (Take Quiz)
+
+actor "Người dùng\n(User)" as User
+participant "Quiz List Screen" as QuizListScreen
+participant "Quiz Screen" as QuizScreen
+participant "Quiz Service" as QuizService
+participant "Challenge Service" as ChallengeService
+participant "Firestore" as Firestore
+
+== Main Flow ==
+
+User -> QuizListScreen: 1. Duyệt danh sách quiz
+activate QuizListScreen
+
+QuizListScreen -> Firestore: 2. Lấy danh sách quiz
+activate Firestore
+Firestore --> QuizListScreen: 3. List<QuizModel>
+deactivate Firestore
+
+QuizListScreen --> User: 4. Hiển thị danh sách quiz
+
+User -> QuizListScreen: 5. Chọn quiz muốn làm
+QuizListScreen -> QuizScreen: 6. Navigate to QuizScreen với quizId
+activate QuizScreen
+deactivate QuizListScreen
+
+QuizScreen -> Firestore: 7. Lấy chi tiết quiz
+activate Firestore
+Firestore --> QuizScreen: 8. QuizModel với questions
+deactivate Firestore
+
+QuizScreen -> QuizScreen: 9. Khởi tạo quiz state
+note right: - Initialize answers list\n- Set timer (nếu có)\n- Set currentQuestionIndex = 0
+
+alt Quiz có timer
+    QuizScreen -> QuizScreen: 10. Bắt đầu đếm ngược
+    note right: timeRemaining = timeLimit
+end
+
+QuizScreen --> User: 11. Hiển thị câu hỏi đầu tiên
+note right: - Câu hỏi\n- Các lựa chọn\n- Timer (nếu có)\n- Progress bar
+
+loop Cho mỗi câu hỏi
+    User -> QuizScreen: 12. Đọc câu hỏi
+    
+    alt Câu hỏi trắc nghiệm (Multiple Choice)
+        User -> QuizScreen: 13. Chọn đáp án
+        QuizScreen -> QuizScreen: 14. Lưu đáp án đã chọn
+    else Câu hỏi điền từ (Fill in Blank)
+        User -> QuizScreen: 13. Nhập đáp án text
+        QuizScreen -> QuizScreen: 14. Lưu text answer
+    else Câu hỏi nhiều đáp án (Multiple Select)
+        User -> QuizScreen: 13. Chọn nhiều đáp án
+        QuizScreen -> QuizScreen: 14. Lưu selectedAnswers[]
+    end
+    
+    QuizScreen -> QuizScreen: 15. saveCurrentAnswer()
+    
+    alt Không phải câu hỏi cuối
+        User -> QuizScreen: 16. Nhấn "Câu tiếp theo"
+        QuizScreen -> QuizScreen: 17. currentQuestionIndex++
+        QuizScreen --> User: 18. Hiển thị câu hỏi tiếp theo
+    else Câu hỏi cuối
+        User -> QuizScreen: 16. Nhấn "Nộp bài"
+        QuizScreen -> QuizScreen: 17. Chuyển đến submit flow
+    end
+end
+
+User -> QuizScreen: 19. Nhấn "Nộp bài"
+
+QuizScreen -> QuizScreen: 20. Xác nhận nộp bài
+
+alt Xác nhận nộp bài
+    QuizScreen -> QuizScreen: 21. Dừng timer (nếu có)
+    QuizScreen -> QuizScreen: 22. Set isQuizCompleted = true
+    
+    QuizScreen -> QuizService: 23. gradeQuiz(quiz, answers, timeElapsed)
+    activate QuizService
+    
+    QuizService -> QuizService: 24. Tính điểm số
+    note right: - So sánh đáp án với đáp án đúng\n- Tính số câu đúng\n- Tính điểm (điểm/câu * số câu đúng)\n- Tính tỉ lệ đúng (%)\n- Xác định đạt/không đạt
+    loop Cho mỗi câu hỏi
+        QuizService -> QuizService: 25. Chấm điểm câu hỏi
+        QuizService -> QuizService: 26. Xác định isCorrect
+        QuizService -> QuizService: 27. Tính pointsEarned
+    end
+    
+    QuizService -> QuizService: 28. Tạo QuizResult object
+    note right: - quizId\n- userId\n- score\n- totalQuestions\n- correctAnswers\n- answers (chi tiết)\n- timeSpent\n- percentage\n- passed (true/false)
+    
+    QuizService --> QuizScreen: 29. QuizResult
+    deactivate QuizService
+    
+    QuizScreen -> QuizService: 30. submitQuizResult(result)
+    activate QuizService
+    
+    QuizService -> Firestore: 31. Lưu kết quả vào quizResults
+    activate Firestore
+    note right: quiz_results/{resultId}\n  - quizId\n  - userId\n  - score\n  - totalQuestions\n  - correctAnswers\n  - answers\n  - completedAt\n  - passed
+    Firestore --> QuizService: 32. Success
+    deactivate Firestore
+    
+    QuizService -> Firestore: 33. Cập nhật quiz statistics
+    activate Firestore
+    note right: quizzes/{quizId}\n  - totalAttempts++\n  - totalPassed++ (nếu đạt)\n  - averageScore\n  - passRate
+    Firestore --> QuizService: 34. Success
+    deactivate Firestore
+    
+    QuizService --> QuizScreen: 35. Success
+    deactivate QuizService
+    
+    alt Quiz này là challenge
+        QuizScreen -> ChallengeService: 36. submitChallengeResult(\n  challengeId, userId, score)
+        activate ChallengeService
+        ChallengeService -> Firestore: 37. Cập nhật challenge result
+        activate Firestore
+        note right: challenges/{challengeId}\n  - challengerScore\n  - challengeeScore\n  - status: 'completed'
+        Firestore --> ChallengeService: 38. Success
+        deactivate Firestore
+        ChallengeService --> QuizScreen: 39. Success
+        deactivate ChallengeService
+    end
+    
+    QuizScreen -> QuizScreen: 40. Set showResults = true
+    QuizScreen --> User: 41. Hiển thị kết quả quiz
+    note right: - Tổng điểm\n- Số câu đúng/tổng số câu\n- Tỉ lệ đúng (%)\n- Đạt/Không đạt\n- Chi tiết từng câu (đúng/sai)
+    
+    User -> QuizScreen: 42. Xem chi tiết từng câu
+    QuizScreen --> User: 43. Hiển thị chi tiết đáp án
+    
+    alt Quiz đạt (score >= passingScore)
+        QuizScreen -> Firestore: 44. Cập nhật user stats
+        activate Firestore
+        note right: users/{userId}\n  - totalQuizzesCompleted++\n  - Sync progress
+        Firestore --> QuizScreen: 45. Success
+        deactivate Firestore
+    end
+    
+    alt Người dùng muốn làm lại
+        User -> QuizScreen: 46. Nhấn "Làm lại"
+        QuizScreen -> QuizScreen: 47. Reset quiz state
+        QuizScreen -> QuizScreen: 48. setShowResults = false
+        QuizScreen -> QuizScreen: 49. Reinitialize quiz
+        QuizScreen --> User: 50. Hiển thị lại câu hỏi đầu tiên
+    else Người dùng hoàn thành
+        User -> QuizScreen: 46. Nhấn "Hoàn thành"
+        QuizScreen -> QuizListScreen: 47. Navigate back
+        deactivate QuizScreen
+    end
+    
+else Hủy nộp bài
+    QuizScreen --> User: 21. Quay lại làm bài
+end
+
+deactivate QuizScreen
+
+== Alternative Flows ==
+
+== A1: Hết thời gian ==
+QuizScreen -> QuizScreen: Timer đếm đến 0
+QuizScreen -> QuizScreen: Tự động submitQuiz()
+QuizScreen --> User: Hiển thị cảnh báo "Hết thời gian!"
+QuizScreen -> QuizScreen: Chuyển đến submit flow
+
+== A2: Quiz không có timer ==
+QuizScreen -> QuizScreen: Bỏ qua timer logic
+QuizScreen --> User: Hiển thị quiz không có timer
+
+@enduml

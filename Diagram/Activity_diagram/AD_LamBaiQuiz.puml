@@ -1,0 +1,163 @@
+@startuml AD_LamBaiQuiz - Activity Diagram: Làm bài Quiz & xem kết quả
+
+title Activity Diagram: Làm bài Quiz & xem kết quả
+
+start
+
+:Học viên mở danh sách Quiz;
+
+if (Tìm kiếm Quiz?) then (Có)
+  :Nhập từ khóa tìm kiếm;
+  :Hệ thống tìm kiếm Quiz;
+endif
+
+if (Lọc Quiz?) then (Có)
+  :Chọn danh mục Quiz;
+  :Chọn độ khó;
+  :Hệ thống lọc danh sách;
+endif
+
+:Học viên chọn Quiz muốn làm;
+
+:Học viên xem chi tiết Quiz;
+note right
+  - Tiêu đề Quiz
+  - Mô tả
+  - Số câu hỏi
+  - Thời gian (nếu có)
+  - Điểm đạt
+  - Độ khó
+end note
+
+:Học viên nhấn "Bắt đầu làm bài";
+
+:Hệ thống tải thông tin Quiz từ cơ sở dữ liệu;
+
+:Hệ thống khởi tạo phiên làm bài;
+note right
+  - Khởi tạo danh sách đáp án
+  - Set currentQuestionIndex = 0
+  - Bắt đầu timer (nếu có)
+end note
+
+if (Quiz có giới hạn thời gian?) then (Có)
+  :Bắt đầu đếm ngược;
+endif
+
+:Hệ thống hiển thị câu hỏi đầu tiên;
+note right
+  - Câu hỏi
+  - Các lựa chọn (nếu có)
+  - Timer (nếu có)
+  - Progress bar
+  - Số câu đã làm / Tổng số câu
+end note
+
+repeat
+  :Học viên đọc câu hỏi;
+  
+  if (Loại câu hỏi: Trắc nghiệm?) then (Có)
+    :Học viên chọn một đáp án;
+    :Lưu đáp án đã chọn;
+  else (Loại: Nhiều đáp án)
+    :Học viên chọn nhiều đáp án;
+    :Lưu các đáp án đã chọn;
+  else (Loại: Điền từ)
+    :Học viên nhập đáp án text;
+    :Lưu đáp án text;
+  else (Loại: Câu trả lời ngắn)
+    :Học viên nhập câu trả lời;
+    :Lưu câu trả lời;
+  endif
+  
+  if (Còn câu hỏi khác?) then (Có)
+    :Học viên nhấn "Câu tiếp theo";
+    :Chuyển đến câu hỏi tiếp theo;
+  else (Câu hỏi cuối)
+    :Học viên nhấn "Nộp bài";
+  endif
+
+repeat while (Còn câu hỏi?) is (Có)
+-> Hết câu hỏi;
+
+:Học viên nhấn "Nộp bài";
+
+:Hệ thống hiển thị xác nhận nộp bài;
+
+if (Xác nhận nộp bài?) then (Không)
+  :Quay lại làm bài;
+  stop
+else (Có)
+  :Dừng timer (nếu có);
+  
+  :Hệ thống tính điểm số;
+  note right
+    - So sánh đáp án với đáp án đúng
+    - Tính số câu đúng
+    - Tính điểm (điểm/câu * số câu đúng)
+    - Tính tỉ lệ đúng (%)
+    - Xác định đạt/không đạt
+  end note
+  
+  :Hệ thống lưu kết quả vào cơ sở dữ liệu;
+  note right
+    - quizId
+    - userId
+    - score
+    - totalQuestions
+    - correctAnswers
+    - answers (chi tiết từng câu)
+    - timeSpent
+    - percentage
+    - passed (true/false)
+    - completedAt
+  end note
+  
+  :Hệ thống cập nhật thống kê Quiz;
+  note right
+    - totalAttempts++
+    - totalPassed++ (nếu đạt)
+    - averageScore
+    - passRate
+  end note
+  
+  if (Quiz đạt (score >= passingScore)?) then (Có)
+    :Cập nhật thống kê học viên;
+    note right
+      - totalQuizzesCompleted++
+      - Cập nhật progress
+    end note
+  endif
+  
+  :Hệ thống hiển thị kết quả Quiz;
+  note right
+    - Tổng điểm
+    - Số câu đúng / Tổng số câu
+    - Tỉ lệ đúng (%)
+    - Đạt / Không đạt
+    - Thời gian làm bài
+    - Animation kết quả
+  end note
+  
+  :Học viên xem chi tiết từng câu;
+  note right
+    - Câu hỏi
+    - Đáp án đã chọn
+    - Đáp án đúng
+    - Giải thích (nếu có)
+    - Đúng / Sai
+  end note
+  
+  if (Học viên muốn làm lại?) then (Có)
+    :Reset phiên làm bài;
+    :Khởi tạo lại từ đầu;
+    -> Quay lại hiển thị câu hỏi đầu tiên;
+  else (Hoàn thành)
+    :Quay về danh sách Quiz;
+  endif
+endif
+
+stop
+
+@enduml
+

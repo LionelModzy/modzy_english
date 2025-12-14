@@ -1,0 +1,70 @@
+@startuml AD_01_Register - Activity Diagram: Đăng ký tài khoản
+
+title Activity Diagram: Đăng ký tài khoản (Register Account)
+
+start
+
+:Người dùng mở màn hình đăng ký;
+
+:Hiển thị form đăng ký;
+
+:Người dùng nhập email;
+
+:Người dùng nhập mật khẩu;
+
+:Người dùng nhập lại mật khẩu;
+
+:Người dùng nhập tên hiển thị;
+
+:Người dùng nhấn nút "Đăng ký";
+
+:Validate dữ liệu đầu vào;
+
+if (Dữ liệu hợp lệ?) then (Không)
+  :Hiển thị lỗi validation;
+  stop
+else (Có)
+  :Gọi registerWithEmail();
+
+  :Tạo tài khoản trên Firebase Auth;
+
+  if (Tạo tài khoản thành công?) then (Không)
+    if (Email đã tồn tại?) then (Có)
+      :Hiển thị lỗi "Email đã được sử dụng";
+      stop
+    else (Mật khẩu yếu)
+      :Hiển thị lỗi "Mật khẩu phải có ít nhất 6 ký tự";
+      stop
+    endif
+  else (Có)
+    :Tạo document user trong Firestore;
+    note right
+      - uid
+      - email
+      - displayName
+      - role: 'user'
+      - createdAt
+      - isActive: true
+      - progress: 0
+    end note
+
+    :Khởi tạo thống kê người dùng;
+    note right
+      - totalLessonsCompleted: 0
+      - totalVocabularyLearned: 0
+      - currentLevel: 1
+      - progressPercentage: 0
+    end note
+
+    :Hiển thị thông báo thành công;
+
+    :Chuyển đến HomeScreen;
+
+    :Hiển thị màn hình chính;
+  endif
+endif
+
+stop
+
+@enduml
+

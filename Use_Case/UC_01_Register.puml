@@ -1,0 +1,94 @@
+@startuml UC_01_Register - Đăng ký tài khoản
+
+title Use Case: Đăng ký tài khoản (Register Account)
+
+actor "Người dùng\n(User)" as User
+participant "Auth Screen" as AuthScreen
+participant "Auth Repository" as AuthRepo
+participant "Firebase Auth" as FirebaseAuth
+participant "Firestore" as Firestore
+participant "User Service" as UserService
+
+== Main Flow ==
+
+User -> AuthScreen: 1. Mở màn hình đăng ký
+activate AuthScreen
+
+User -> AuthScreen: 2. Nhập email
+User -> AuthScreen: 3. Nhập mật khẩu
+User -> AuthScreen: 4. Nhập lại mật khẩu
+User -> AuthScreen: 5. Nhập tên hiển thị
+User -> AuthScreen: 6. Nhấn nút "Đăng ký"
+
+AuthScreen -> AuthScreen: 7. Validate dữ liệu đầu vào
+note right: - Email hợp lệ\n- Mật khẩu >= 6 ký tự\n- Mật khẩu khớp nhau\n- Tên không rỗng
+
+alt Dữ liệu hợp lệ
+    AuthScreen -> AuthRepo: 8. registerWithEmail(email, password, displayName)
+    activate AuthRepo
+    
+    AuthRepo -> FirebaseAuth: 9. createUserWithEmailAndPassword()
+    activate FirebaseAuth
+    
+    alt Tạo tài khoản thành công
+        FirebaseAuth --> AuthRepo: 10. UserCredential
+        deactivate FirebaseAuth
+        
+        AuthRepo -> Firestore: 11. Tạo document user trong Firestore
+        activate Firestore
+        note right: - uid\n- email\n- displayName\n- role: 'user'\n- createdAt\n- isActive: true\n- progress: 0
+        Firestore --> AuthRepo: 12. Success
+        deactivate Firestore
+        
+        AuthRepo -> UserService: 13. Khởi tạo thống kê người dùng
+        activate UserService
+        note right: - totalLessonsCompleted: 0\n- totalVocabularyLearned: 0\n- currentLevel: 1\n- progressPercentage: 0
+        UserService --> AuthRepo: 14. Success
+        deactivate UserService
+        
+        AuthRepo --> AuthScreen: 15. Success + UserModel
+        deactivate AuthRepo
+        
+        AuthScreen -> AuthScreen: 16. Hiển thị thông báo thành công
+        AuthScreen -> AuthScreen: 17. Chuyển đến HomeScreen
+        AuthScreen --> User: 18. Hiển thị màn hình chính
+    else Email đã tồn tại
+        FirebaseAuth --> AuthRepo: 10. Error: Email already exists
+        deactivate FirebaseAuth
+        AuthRepo --> AuthScreen: 15. Error: Email đã được sử dụng
+        deactivate AuthRepo
+        AuthScreen --> User: 16. Hiển thị lỗi "Email đã được sử dụng"
+    else Mật khẩu yếu
+        FirebaseAuth --> AuthRepo: 10. Error: Weak password
+        deactivate FirebaseAuth
+        AuthRepo --> AuthScreen: 15. Error: Mật khẩu quá yếu
+        deactivate AuthRepo
+        AuthScreen --> User: 16. Hiển thị lỗi "Mật khẩu phải có ít nhất 6 ký tự"
+    end
+else Dữ liệu không hợp lệ
+    AuthScreen --> User: 8. Hiển thị lỗi validation
+    note right: - Email không đúng định dạng\n- Mật khẩu không khớp\n- Tên rỗng
+end
+
+deactivate AuthScreen
+
+== Alternative Flows ==
+
+== A1: Người dùng hủy đăng ký ==
+User -> AuthScreen: Hủy đăng ký
+AuthScreen -> AuthScreen: Quay lại màn hình đăng nhập
+AuthScreen --> User: Hiển thị màn hình đăng nhập
+
+== A2: Kết nối mạng lỗi ==
+FirebaseAuth --> AuthRepo: Error: Network error
+AuthRepo --> AuthScreen: Error: Không có kết nối mạng
+AuthScreen --> User: Hiển thị lỗi "Vui lòng kiểm tra kết nối mạng"
+
+== A3: Lỗi Firestore ==
+Firestore --> AuthRepo: Error: Firestore write failed
+AuthRepo -> FirebaseAuth: Xóa user đã tạo
+AuthRepo --> AuthScreen: Error: Lỗi hệ thống, vui lòng thử lại
+AuthScreen --> User: Hiển thị lỗi "Đã xảy ra lỗi, vui lòng thử lại"
+
+@enduml
+

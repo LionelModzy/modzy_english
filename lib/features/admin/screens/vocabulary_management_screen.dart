@@ -1840,6 +1840,8 @@ class _VocabularyFormWidgetState extends State<VocabularyFormWidget> {
     setState(() => _isLoading = true);
     
     try {
+      final user = await AuthRepository.getCurrentUserData();
+      
       final examples = _examplesController.text
           .split('\n')
           .map((s) => s.trim())
@@ -1879,6 +1881,7 @@ class _VocabularyFormWidgetState extends State<VocabularyFormWidget> {
         updatedAt: DateTime.now(),
         isActive: true,
         usageCount: widget.vocabulary?.usageCount ?? 0,
+        createdBy: widget.vocabulary?.createdBy ?? user?.uid ?? 'admin',
         metadata: widget.vocabulary?.metadata ?? {},
       );
       

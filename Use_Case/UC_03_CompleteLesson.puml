@@ -1,0 +1,116 @@
+@startuml UC_03_CompleteLesson - Hoàn thành bài học
+
+title Use Case: Hoàn thành bài học (Complete Lesson)
+
+actor "Người dùng\n(User)" as User
+participant "Lesson Detail Screen" as LessonScreen
+participant "Lesson Player Screen" as PlayerScreen
+participant "Learning Progress Service" as ProgressService
+participant "Firestore" as Firestore
+participant "User Progress Utils" as ProgressUtils
+participant "Home Screen" as HomeScreen
+
+== Main Flow ==
+
+User -> LessonScreen: 1. Xem chi tiết bài học
+activate LessonScreen
+
+User -> LessonScreen: 2. Xem các section của bài học
+User -> LessonScreen: 3. Phát video/audio bài học
+User -> PlayerScreen: 4. Xem video/audio
+activate PlayerScreen
+
+User -> PlayerScreen: 5. Xem hết nội dung bài học
+User -> PlayerScreen: 6. Nhấn "Hoàn thành bài học"
+PlayerScreen -> PlayerScreen: 7. Xác nhận hoàn thành
+note right: - Đã xem đủ nội dung\n- Đã xem video/audio
+
+alt Xác nhận hoàn thành
+    PlayerScreen -> ProgressService: 8. markLessonAsCompleted(lessonId, userId)
+    activate ProgressService
+    
+    ProgressService -> Firestore: 9. Kiểm tra lesson đã hoàn thành chưa
+    activate Firestore
+    Firestore --> ProgressService: 10. Chưa hoàn thành
+    deactivate Firestore
+    
+    ProgressService -> Firestore: 11. Thêm vào learningHistory
+    activate Firestore
+    note right: - lessonId\n- completedAt\n- userId\n- score (nếu có)
+    Firestore --> ProgressService: 12. Success
+    deactivate Firestore
+    
+    ProgressService -> Firestore: 13. Cập nhật user stats
+    activate Firestore
+    note right: - totalLessonsCompleted++\n- Cập nhật progressPercentage\n- Cập nhật currentLevel nếu cần
+    Firestore --> ProgressService: 14. Success
+    deactivate Firestore
+    
+    ProgressService -> ProgressUtils: 15. Sync progress với stats
+    activate ProgressUtils
+    ProgressUtils -> Firestore: 16. Tính toán lại progress
+    activate Firestore
+    Firestore --> ProgressUtils: 17. Updated stats
+    deactivate Firestore
+    ProgressUtils --> ProgressService: 18. Success
+    deactivate ProgressUtils
+    
+    ProgressService --> PlayerScreen: 19. Success + Updated UserModel
+    deactivate ProgressService
+    
+    PlayerScreen -> PlayerScreen: 20. Hiển thị thông báo thành công
+    note right: "Chúc mừng! Bạn đã hoàn thành bài học"
+    
+    PlayerScreen -> LessonScreen: 21. Cập nhật trạng thái bài học
+    LessonScreen -> LessonScreen: 22. Đánh dấu bài học đã hoàn thành
+    LessonScreen -> LessonScreen: 23. Cập nhật progress bar
+    
+    PlayerScreen -> HomeScreen: 24. (Tùy chọn) Quay về Home
+    activate HomeScreen
+    HomeScreen -> HomeScreen: 25. Refresh progress card
+    HomeScreen --> User: 26. Hiển thị tiến độ mới
+    deactivate HomeScreen
+else Hủy bỏ
+    PlayerScreen --> User: 7. Quay lại xem bài học
+end
+
+deactivate PlayerScreen
+deactivate LessonScreen
+
+== Alternative Flows ==
+
+== A1: Bài học đã hoàn thành trước đó ==
+ProgressService -> Firestore: Kiểm tra lesson đã hoàn thành
+Firestore --> ProgressService: Đã hoàn thành
+ProgressService --> PlayerScreen: Warning: Bài học đã được hoàn thành trước đó
+PlayerScreen --> User: Hiển thị "Bạn đã hoàn thành bài học này"
+
+== A2: Chưa xem đủ nội dung ==
+PlayerScreen -> PlayerScreen: Kiểm tra tiến độ xem
+note right: - Video chưa xem hết\n- Audio chưa nghe hết
+PlayerScreen --> User: Cảnh báo "Bạn chưa xem hết nội dung bài học"
+
+== A3: Lỗi lưu tiến độ ==
+Firestore --> ProgressService: Error: Write failed
+ProgressService --> PlayerScreen: Error: Không thể lưu tiến độ
+PlayerScreen --> User: Hiển thị lỗi "Đã xảy ra lỗi, vui lòng thử lại"
+
+== A4: Cập nhật level mới ==
+ProgressUtils -> Firestore: Kiểm tra điều kiện lên level
+Firestore --> ProgressUtils: Đủ điều kiện lên level
+ProgressUtils -> Firestore: Cập nhật currentLevel
+Firestore --> ProgressUtils: Success
+ProgressUtils --> PlayerScreen: Thông báo "Chúc mừng! Bạn đã lên level mới"
+PlayerScreen --> User: Hiển thị animation lên level
+
+== A5: Thêm vào yêu thích sau khi hoàn thành ==
+PlayerScreen -> PlayerScreen: Hiển thị option "Thêm vào yêu thích"
+User -> PlayerScreen: Nhấn "Thêm vào yêu thích"
+PlayerScreen -> ProgressService: addToFavorites(lessonId)
+ProgressService -> Firestore: Thêm vào favorites collection
+Firestore --> ProgressService: Success
+ProgressService --> PlayerScreen: Success
+PlayerScreen --> User: Thông báo "Đã thêm vào yêu thích"
+
+@enduml
+

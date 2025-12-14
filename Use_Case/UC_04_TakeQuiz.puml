@@ -1,0 +1,150 @@
+@startuml UC_04_TakeQuiz - Làm bài quiz
+
+title Use Case: Làm bài quiz (Take Quiz)
+
+actor "Người dùng\n(User)" as User
+participant "Quiz List Screen" as QuizListScreen
+participant "Quiz Screen" as QuizScreen
+participant "Quiz Service" as QuizService
+participant "Learning Progress Service" as ProgressService
+participant "Firestore" as Firestore
+participant "User Progress Utils" as ProgressUtils
+
+== Main Flow ==
+
+User -> QuizListScreen: 1. Duyệt danh sách quiz
+activate QuizListScreen
+
+User -> QuizListScreen: 2. Chọn quiz muốn làm
+User -> QuizListScreen: 3. Nhấn "Bắt đầu làm bài"
+QuizListScreen -> QuizScreen: 4. Mở màn hình quiz với quizId
+activate QuizScreen
+
+QuizScreen -> QuizService: 5. getQuizById(quizId)
+activate QuizService
+QuizService -> Firestore: 6. Lấy thông tin quiz
+activate Firestore
+Firestore --> QuizService: 7. QuizModel với questions
+deactivate Firestore
+QuizService --> QuizScreen: 8. QuizModel
+deactivate QuizService
+
+QuizScreen -> QuizScreen: 9. Hiển thị câu hỏi đầu tiên
+note right: - Hiển thị câu hỏi\n- Hiển thị các lựa chọn\n- Hiển thị timer (nếu có)\n- Hiển thị progress bar
+
+loop Cho mỗi câu hỏi
+    User -> QuizScreen: 10. Đọc câu hỏi
+    User -> QuizScreen: 11. Chọn đáp án
+    QuizScreen -> QuizScreen: 12. Lưu đáp án đã chọn
+    QuizScreen -> QuizScreen: 13. Chuyển đến câu hỏi tiếp theo
+end
+
+User -> QuizScreen: 14. Nhấn "Nộp bài"
+QuizScreen -> QuizScreen: 15. Xác nhận nộp bài
+
+alt Xác nhận nộp bài
+    QuizScreen -> QuizScreen: 16. Tính điểm số
+    note right: - So sánh đáp án với đáp án đúng\n- Tính số câu đúng\n- Tính điểm (điểm/câu * số câu đúng)\n- Xác định đạt/không đạt
+    
+    QuizScreen -> QuizScreen: 17. Hiển thị kết quả
+    note right: - Tổng điểm\n- Số câu đúng/tổng số câu\n- Tỉ lệ đúng (%)\n- Đạt/Không đạt\n- Chi tiết từng câu (đúng/sai)
+    
+    QuizScreen -> ProgressService: 18. saveQuizResult(quizId, score, answers)
+    activate ProgressService
+    
+    ProgressService -> Firestore: 19. Lưu kết quả vào quizResults
+    activate Firestore
+    note right: - quizId\n- userId\n- score\n- totalQuestions\n- correctAnswers\n- answers (chi tiết)\n- completedAt\n- passed (true/false)
+    Firestore --> ProgressService: 20. Success
+    deactivate Firestore
+    
+    ProgressService -> Firestore: 21. Cập nhật quiz statistics
+    activate Firestore
+    note right: - totalAttempts++\n- totalPassed++ (nếu đạt)\n- averageScore\n- passRate
+    Firestore --> ProgressService: 22. Success
+    deactivate Firestore
+    
+    alt Quiz đạt (score >= passingScore)
+        ProgressService -> Firestore: 23. Cập nhật user stats (nếu quiz đạt)
+        activate Firestore
+        note right: - Có thể cập nhật progress\n- Có thể cập nhật level
+        Firestore --> ProgressService: 24. Success
+        deactivate Firestore
+        
+        ProgressService -> ProgressUtils: 25. Sync progress
+        activate ProgressUtils
+        ProgressUtils --> ProgressService: 26. Success
+        deactivate ProgressUtils
+    end
+    
+    ProgressService --> QuizScreen: 27. Success
+    deactivate ProgressService
+    
+    QuizScreen -> QuizScreen: 28. Hiển thị animation kết quả
+    note right: - Animation thành công (nếu đạt)\n- Animation thất bại (nếu không đạt)
+    
+    User -> QuizScreen: 29. Xem chi tiết từng câu
+    QuizScreen -> QuizScreen: 30. Hiển thị chi tiết
+    note right: - Câu hỏi\n- Đáp án đã chọn\n- Đáp án đúng\n- Giải thích (nếu có)
+    
+    alt Quiz đạt
+        QuizScreen -> QuizScreen: 31. Hiển thị option "Làm lại"
+        User -> QuizScreen: (Tùy chọn) Nhấn "Làm lại"
+        QuizScreen -> QuizScreen: Reset và bắt đầu lại từ bước 9
+    else Quiz không đạt
+        QuizScreen -> QuizScreen: 31. Hiển thị option "Làm lại"
+        User -> QuizScreen: Nhấn "Làm lại"
+        QuizScreen -> QuizScreen: Reset và bắt đầu lại từ bước 9
+    end
+    
+    User -> QuizScreen: 32. Nhấn "Hoàn thành"
+    QuizScreen -> QuizListScreen: 33. Quay về danh sách quiz
+    deactivate QuizScreen
+else Hủy bỏ
+    QuizScreen --> User: 15. Quay lại làm bài
+end
+
+deactivate QuizListScreen
+
+== Alternative Flows ==
+
+== A1: Hết thời gian làm bài ==
+QuizScreen -> QuizScreen: Timer đếm ngược về 0
+QuizScreen -> QuizScreen: Tự động nộp bài
+QuizScreen -> QuizScreen: Chuyển đến bước 16 (Tính điểm)
+
+== A2: Người dùng muốn tạm dừng ==
+User -> QuizScreen: Nhấn "Tạm dừng"
+QuizScreen -> QuizScreen: Lưu tiến độ hiện tại
+QuizScreen -> QuizScreen: Hiển thị dialog xác nhận
+alt Xác nhận thoát
+    QuizScreen -> QuizListScreen: Quay về danh sách (lưu tiến độ)
+else Hủy
+    QuizScreen -> QuizScreen: Tiếp tục làm bài
+end
+
+== A3: Lỗi lưu kết quả ==
+Firestore --> ProgressService: Error: Write failed
+ProgressService --> QuizScreen: Error: Không thể lưu kết quả
+QuizScreen --> User: Hiển thị lỗi "Đã xảy ra lỗi, vui lòng thử lại"
+QuizScreen -> QuizScreen: Cho phép thử lại lưu kết quả
+
+== A4: Quiz đã làm trước đó ==
+QuizScreen -> QuizService: Kiểm tra quiz đã làm chưa
+QuizService -> Firestore: Kiểm tra quizResults
+Firestore --> QuizService: Đã có kết quả
+QuizService --> QuizScreen: Previous result
+QuizScreen -> QuizScreen: Hiển thị kết quả trước đó
+QuizScreen -> QuizScreen: Option "Làm lại" hoặc "Xem kết quả"
+
+== A5: Quiz liên kết với Lesson ==
+QuizScreen -> QuizScreen: Kiểm tra quiz có lessonId
+alt Có lessonId
+    QuizScreen -> ProgressService: Đánh dấu lesson đã hoàn thành quiz
+    ProgressService -> Firestore: Cập nhật lesson progress
+    Firestore --> ProgressService: Success
+    ProgressService --> QuizScreen: Success
+end
+
+@enduml
+

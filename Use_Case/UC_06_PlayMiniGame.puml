@@ -1,0 +1,208 @@
+@startuml UC_06_PlayMiniGame - Chơi mini game
+
+title Use Case: Chơi mini game (Play Mini Game)
+
+actor "Người dùng\n(User)" as User
+participant "Mini Games Menu Screen" as MenuScreen
+participant "Game Screen" as GameScreen
+participant "Mini Game Service" as GameService
+participant "Firestore" as Firestore
+participant "Leaderboard Service" as LeaderboardService
+
+== Main Flow ==
+
+User -> MenuScreen: 1. Mở màn hình mini games
+activate MenuScreen
+
+MenuScreen -> GameService: 2. getAllMiniGames()
+activate GameService
+GameService -> Firestore: 3. Lấy danh sách games
+activate Firestore
+Firestore --> GameService: 4. List<MiniGameModel>
+deactivate Firestore
+GameService --> MenuScreen: 5. List games
+deactivate GameService
+
+MenuScreen -> MenuScreen: 6. Hiển thị danh sách games
+note right: - Word Match Game\n- Word Scramble Game\n- Word Search Game
+
+User -> MenuScreen: 7. Chọn loại game muốn chơi
+alt Chọn Word Match Game
+    MenuScreen -> GameScreen: 8. Mở Word Match Game
+else Chọn Word Scramble Game
+    MenuScreen -> GameScreen: 9. Mở Word Scramble Game
+else Chọn Word Search Game
+    MenuScreen -> GameScreen: 10. Mở Word Search Game
+end
+
+activate GameScreen
+
+GameScreen -> GameService: 11. getMiniGameById(gameId)
+activate GameService
+GameService -> Firestore: 12. Lấy thông tin game
+activate Firestore
+Firestore --> GameService: 13. MiniGameModel với vocabulary words
+deactivate Firestore
+GameService --> GameScreen: 14. MiniGameModel
+deactivate GameService
+
+GameScreen -> GameScreen: 15. Khởi tạo game
+note right: - Load vocabulary words\n- Setup game board\n- Initialize timer\n- Initialize score = 0\n- Initialize moves = 0
+
+== Word Match Game Flow ==
+alt Game type: Word Match
+    GameScreen -> GameScreen: 16. Tạo bảng game với các cặp thẻ
+    note right: - 12 thẻ (6 cặp)\n- Mỗi thẻ có từ tiếng Anh hoặc nghĩa tiếng Việt\n- Thẻ được xáo trộn
+    
+    loop Cho đến khi tìm hết cặp
+        User -> GameScreen: 17. Lật thẻ thứ nhất
+        GameScreen -> GameScreen: 18. Hiển thị nội dung thẻ
+        GameScreen -> GameScreen: 19. Moves++
+        
+        User -> GameScreen: 20. Lật thẻ thứ hai
+        GameScreen -> GameScreen: 21. Hiển thị nội dung thẻ
+        GameScreen -> GameScreen: 22. Moves++
+        
+        GameScreen -> GameScreen: 23. Kiểm tra khớp
+        alt Hai thẻ khớp
+            GameScreen -> GameScreen: 24. Giữ thẻ mở + Score += 100
+            GameScreen -> GameScreen: 25. Hiển thị animation "Match!"
+            GameScreen -> GameScreen: 26. MatchedPairs++
+        else Hai thẻ không khớp
+            GameScreen -> GameScreen: 24. Đợi 1 giây rồi lật lại
+            GameScreen -> GameScreen: 25. Hiển thị animation "Try again"
+        end
+    end
+    
+    GameScreen -> GameScreen: 27. Tính điểm cuối cùng
+    note right: - Base score: 100 * số cặp\n- Time bonus: dựa trên thời gian\n- Moves penalty: trừ điểm nếu moves nhiều
+end
+
+== Word Scramble Game Flow ==
+alt Game type: Word Scramble
+    GameScreen -> GameScreen: 16. Hiển thị từ đã xáo trộn
+    GameScreen -> GameScreen: 17. Hiển thị gợi ý (nghĩa tiếng Việt)
+    
+    loop Cho đến khi đoán đúng hoặc hết thời gian
+        User -> GameScreen: 18. Sắp xếp lại các chữ cái
+        GameScreen -> GameScreen: 19. Kiểm tra từ đã tạo
+        alt Từ đúng
+            GameScreen -> GameScreen: 20. Score += 200 + time bonus
+            GameScreen -> GameScreen: 21. Chuyển đến từ tiếp theo
+        else Từ sai
+            GameScreen -> GameScreen: 20. Hiển thị "Sai rồi, thử lại"
+        end
+    end
+end
+
+== Word Search Game Flow ==
+alt Game type: Word Search
+    GameScreen -> GameScreen: 16. Hiển thị lưới chữ cái
+    GameScreen -> GameScreen: 17. Hiển thị danh sách từ cần tìm
+    
+    loop Cho đến khi tìm hết từ hoặc hết thời gian
+        User -> GameScreen: 18. Kéo để chọn các ô chữ cái
+        GameScreen -> GameScreen: 19. Highlight các ô đã chọn
+        GameScreen -> GameScreen: 20. Kiểm tra từ đã chọn
+        alt Từ đúng
+            GameScreen -> GameScreen: 21. Score += 150
+            GameScreen -> GameScreen: 22. Đánh dấu từ đã tìm thấy
+            GameScreen -> GameScreen: 23. Gạch bỏ từ trong danh sách
+        else Từ sai
+            GameScreen -> GameScreen: 21. Bỏ highlight
+        end
+    end
+end
+
+GameScreen -> GameScreen: 28. Game kết thúc
+note right: - Hết thời gian\n- Hoàn thành tất cả từ/cặp\n- Người dùng nhấn "Kết thúc"
+
+GameScreen -> GameScreen: 29. Hiển thị kết quả
+note right: - Final score\n- Time used\n- Moves (nếu có)\n- Accuracy\n- Rating (Excellent/Good/Fair)
+
+GameScreen -> GameService: 30. saveGameScore(gameId, score, time, moves)
+activate GameService
+
+GameService -> Firestore: 31. Lưu score vào gameScores collection
+activate Firestore
+note right: - gameId\n- userId\n- score\n- time\n- moves\n- completedAt\n- accuracy
+Firestore --> GameService: 32. Success
+deactivate Firestore
+
+GameService -> Firestore: 33. Cập nhật game statistics
+activate Firestore
+note right: - totalPlays++\n- averageScore\n- bestScore (nếu score > bestScore)
+Firestore --> GameService: 34. Success
+deactivate Firestore
+
+GameService -> LeaderboardService: 35. Update leaderboard
+activate LeaderboardService
+LeaderboardService -> Firestore: 36. Cập nhật leaderboard
+activate Firestore
+Firestore --> LeaderboardService: 37. Success
+deactivate Firestore
+LeaderboardService --> GameService: 38. Success
+deactivate LeaderboardService
+
+GameService --> GameScreen: 39. Success
+deactivate GameService
+
+GameScreen -> GameScreen: 40. Hiển thị options
+note right: - "Chơi lại"\n- "Chơi game khác"\n- "Xem leaderboard"\n- "Quay về menu"
+
+alt Người dùng chọn "Chơi lại"
+    User -> GameScreen: 41. Nhấn "Chơi lại"
+    GameScreen -> GameScreen: Reset game và quay lại bước 15
+else Người dùng chọn "Xem leaderboard"
+    User -> GameScreen: 42. Nhấn "Xem leaderboard"
+    GameScreen -> LeaderboardService: 43. getLeaderboard(gameId)
+    LeaderboardService -> Firestore: 44. Lấy top scores
+    Firestore --> LeaderboardService: 45. List top players
+    LeaderboardService --> GameScreen: 46. Leaderboard data
+    GameScreen -> GameScreen: 47. Hiển thị bảng xếp hạng
+end
+
+User -> GameScreen: 48. Nhấn "Quay về menu"
+GameScreen -> MenuScreen: 49. Quay về menu
+deactivate GameScreen
+deactivate MenuScreen
+
+== Alternative Flows ==
+
+== A1: Game không có sẵn ==
+GameService -> Firestore: Lấy game
+Firestore --> GameService: Game không tồn tại hoặc inactive
+GameService --> GameScreen: Error: Game không khả dụng
+GameScreen --> User: Hiển thị lỗi "Game không khả dụng"
+
+== A2: Hết thời gian ==
+GameScreen -> GameScreen: Timer đếm ngược về 0
+GameScreen -> GameScreen: Tự động kết thúc game
+GameScreen -> GameScreen: Chuyển đến bước 29 (Hiển thị kết quả)
+
+== A3: Lỗi lưu score ==
+Firestore --> GameService: Error: Write failed
+GameService --> GameScreen: Error: Không thể lưu điểm số
+GameScreen --> User: Hiển thị lỗi "Đã xảy ra lỗi, vui lòng thử lại"
+GameScreen -> GameScreen: Cho phép thử lại lưu score
+
+== A4: Pause game ==
+User -> GameScreen: Nhấn "Tạm dừng"
+GameScreen -> GameScreen: Pause timer và game
+GameScreen -> GameScreen: Hiển thị dialog
+alt Tiếp tục
+    GameScreen -> GameScreen: Resume game
+else Thoát
+    GameScreen -> GameScreen: Lưu tiến độ và quay về menu
+end
+
+== A5: Đạt điểm cao mới ==
+GameService -> Firestore: Kiểm tra bestScore
+Firestore --> GameService: Score > bestScore
+GameService -> Firestore: Cập nhật bestScore
+Firestore --> GameService: Success
+GameService --> GameScreen: Thông báo "Kỷ lục mới!"
+GameScreen -> GameScreen: Hiển thị animation đặc biệt
+
+@enduml
+

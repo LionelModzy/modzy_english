@@ -1,0 +1,231 @@
+@startuml SD_10_AdminManageUsers - Sequence Diagram: Quản trị viên quản lý người dùng
+
+title Sequence Diagram: Quản trị viên quản lý người dùng (Admin Manage Users)
+
+actor "Quản trị viên\n(Admin)" as Admin
+participant "Admin Dashboard" as AdminDashboard
+participant "User Management Screen" as UserMgmtScreen
+participant "User Management Service" as UserMgmtService
+participant "Firebase Service" as FirebaseService
+participant "Firestore" as Firestore
+participant "Firebase Auth" as FirebaseAuth
+
+== Main Flow ==
+
+Admin -> AdminDashboard: 1. Mở Admin Dashboard
+activate AdminDashboard
+
+AdminDashboard --> Admin: 2. Hiển thị dashboard
+
+Admin -> AdminDashboard: 3. Nhấn "Quản lý Người dùng"
+AdminDashboard -> UserMgmtScreen: 4. Navigate to UserManagementScreen
+activate UserMgmtScreen
+deactivate AdminDashboard
+
+UserMgmtScreen -> UserMgmtService: 5. getAllUsers()
+activate UserMgmtService
+UserMgmtService -> Firestore: 6. Lấy tất cả users từ collection 'users'
+activate Firestore
+Firestore --> UserMgmtService: 7. List<DocumentSnapshot>
+deactivate Firestore
+UserMgmtService -> UserMgmtService: 8. Parse to List<UserModel>
+UserMgmtService --> UserMgmtScreen: 9. List<UserModel>
+deactivate UserMgmtService
+
+UserMgmtScreen --> Admin: 10. Hiển thị danh sách người dùng
+note right: - Tên\n- Email\n- Role\n- Status (Active/Inactive)\n- Progress\n- Created At\n- Actions buttons
+
+== Search Users ==
+
+alt Admin muốn tìm kiếm
+    Admin -> UserMgmtScreen: 11. Nhập từ khóa (tên/email)
+    UserMgmtScreen -> UserMgmtService: 12. searchUsers(searchQuery)
+    activate UserMgmtService
+    UserMgmtService -> Firestore: 13. Query users collection
+    activate Firestore
+    note right: Filter users where:\n  displayName contains query\n  OR email contains query\n  OR uid == query
+    Firestore --> UserMgmtService: 14. Filtered documents
+    deactivate Firestore
+    UserMgmtService --> UserMgmtScreen: 15. List filtered users
+    deactivate UserMgmtService
+    UserMgmtScreen --> Admin: 16. Hiển thị kết quả tìm kiếm
+end
+
+== View User Details ==
+
+alt Admin muốn xem chi tiết
+    Admin -> UserMgmtScreen: 17. Nhấn vào user
+    UserMgmtScreen -> UserMgmtScreen: 18. Mở dialog chi tiết người dùng
+    UserMgmtScreen -> Firestore: 19. Lấy thông tin chi tiết user
+    activate Firestore
+    note right: users/{userId}\n  - Thông tin cá nhân\n  - Tiến độ học tập\n  - Lịch sử hoạt động\n  - Danh sách bạn bè\n  - Challenges
+    Firestore --> UserMgmtScreen: 20. UserModel + additional data
+    deactivate Firestore
+    UserMgmtScreen --> Admin: 21. Hiển thị dialog với chi tiết
+end
+
+== Edit User Information ==
+
+alt Admin muốn chỉnh sửa
+    Admin -> UserMgmtScreen: 22. Nhấn "Chỉnh sửa" trên user
+    UserMgmtScreen -> UserMgmtScreen: 23. Mở form chỉnh sửa
+    UserMgmtScreen --> Admin: 24. Hiển thị form với data hiện tại
+    
+    Admin -> UserMgmtScreen: 25. Chỉnh sửa thông tin
+    note right: - Display Name\n- Email\n- Role\n- Status
+    
+    Admin -> UserMgmtScreen: 26. Nhấn "Lưu"
+    
+    UserMgmtScreen -> UserMgmtService: 27. updateUserProfile(userId, userData)
+    activate UserMgmtService
+    
+    UserMgmtService -> Firestore: 28. Cập nhật user document
+    activate Firestore
+    note right: users/{userId}\n  Update fields:\n  - displayName\n  - email (nếu có)\n  - updatedAt
+    Firestore --> UserMgmtService: 29. Success
+    deactivate Firestore
+    
+    alt Thay đổi email
+        UserMgmtService -> FirebaseService: 30. updateUserEmail(userId, newEmail)
+        activate FirebaseService
+        FirebaseService -> FirebaseAuth: 31. updateEmail(newEmail)
+        activate FirebaseAuth
+        FirebaseAuth --> FirebaseService: 32. Success
+        deactivate FirebaseAuth
+        FirebaseService --> UserMgmtService: 33. Success
+        deactivate FirebaseService
+    end
+    
+    UserMgmtService --> UserMgmtScreen: 34. Success
+    deactivate UserMgmtService
+    
+    UserMgmtScreen -> UserMgmtScreen: 35. Hiển thị thông báo thành công
+    UserMgmtScreen -> UserMgmtScreen: 36. Refresh danh sách
+    UserMgmtScreen --> Admin: 37. Cập nhật UI
+end
+
+== Deactivate User ==
+
+alt Admin muốn vô hiệu hóa
+    Admin -> UserMgmtScreen: 38. Nhấn "Vô hiệu hóa" trên user
+    
+    alt Là chính admin đang đăng nhập
+        UserMgmtScreen -> UserMgmtScreen: 39. Kiểm tra _isCurrentUser()
+        UserMgmtScreen --> Admin: 40. Hiển thị lỗi "Không thể vô hiệu hóa chính mình"
+    else Không phải admin đang đăng nhập
+        UserMgmtScreen -> UserMgmtScreen: 41. Hiển thị dialog xác nhận
+        
+        alt Xác nhận vô hiệu hóa
+            Admin -> UserMgmtScreen: 42. Xác nhận
+            UserMgmtScreen -> UserMgmtService: 43. updateUserStatus(userId, false)
+            activate UserMgmtService
+            
+            UserMgmtService -> Firestore: 44. Cập nhật isActive = false
+            activate Firestore
+            Firestore --> UserMgmtService: 45. Success
+            deactivate Firestore
+            
+            UserMgmtService --> UserMgmtScreen: 46. Success
+            deactivate UserMgmtService
+            
+            UserMgmtScreen -> UserMgmtScreen: 47. Cập nhật UI - user chuyển sang "Inactive"
+            UserMgmtScreen --> Admin: 48. Hiển thị "Đã vô hiệu hóa người dùng"
+        else Hủy
+            UserMgmtScreen -> UserMgmtScreen: 42. Đóng dialog
+        end
+    end
+end
+
+== Activate User ==
+
+alt Admin muốn kích hoạt
+    Admin -> UserMgmtScreen: 49. Nhấn "Kích hoạt" trên user inactive
+    
+    UserMgmtScreen -> UserMgmtService: 50. updateUserStatus(userId, true)
+    activate UserMgmtService
+    
+    UserMgmtService -> Firestore: 51. Cập nhật isActive = true
+    activate Firestore
+    Firestore --> UserMgmtService: 52. Success
+    deactivate Firestore
+    
+    UserMgmtService --> UserMgmtScreen: 53. Success
+    deactivate UserMgmtService
+    
+    UserMgmtScreen -> UserMgmtScreen: 54. Cập nhật UI - user chuyển sang "Active"
+    UserMgmtScreen --> Admin: 55. Hiển thị "Đã kích hoạt người dùng"
+end
+
+== Change User Role ==
+
+alt Admin muốn thay đổi vai trò
+    Admin -> UserMgmtScreen: 56. Nhấn "Thay đổi vai trò"
+    
+    alt Là chính admin đang đăng nhập
+        UserMgmtScreen -> UserMgmtScreen: 57. Kiểm tra _isCurrentUser()
+        UserMgmtScreen --> Admin: 58. Hiển thị lỗi "Không thể thay đổi vai trò của chính mình"
+    else Không phải admin đang đăng nhập
+        UserMgmtScreen -> UserMgmtScreen: 59. Hiển thị dialog chọn role
+        note right: - User\n- Teacher\n- Admin
+        
+        Admin -> UserMgmtScreen: 60. Chọn role mới
+        
+        UserMgmtScreen -> UserMgmtService: 61. updateUserRole(userId, newRole)
+        activate UserMgmtService
+        
+        UserMgmtService -> Firestore: 62. Cập nhật role field
+        activate Firestore
+        note right: users/{userId}\n  Update:\n  - role: newRole\n  - updatedAt
+        Firestore --> UserMgmtService: 63. Success
+        deactivate Firestore
+        
+        UserMgmtService --> UserMgmtScreen: 64. Success
+        deactivate UserMgmtService
+        
+        UserMgmtScreen -> UserMgmtScreen: 65. Hiển thị thông báo thành công
+        UserMgmtScreen -> UserMgmtScreen: 66. Refresh danh sách
+        UserMgmtScreen --> Admin: 67. Cập nhật UI với role mới
+    end
+end
+
+Admin -> UserMgmtScreen: 68. Quay về Admin Dashboard
+UserMgmtScreen -> AdminDashboard: 69. Navigate back
+deactivate UserMgmtScreen
+activate AdminDashboard
+AdminDashboard --> Admin: 70. Hiển thị dashboard
+
+deactivate AdminDashboard
+
+== Alternative Flows ==
+
+== A1: Filter Users ==
+Admin -> UserMgmtScreen: Lọc người dùng
+UserMgmtScreen -> UserMgmtScreen: Hiển thị filter options
+note right: - Filter theo role\n- Filter theo status\n- Filter theo level\n- Sort by name/date/progress
+Admin -> UserMgmtScreen: Chọn filter
+UserMgmtScreen -> UserMgmtService: getFilteredUsers(filters)
+UserMgmtService -> Firestore: Query với filters
+Firestore --> UserMgmtService: Filtered list
+UserMgmtService --> UserMgmtScreen: Filtered users
+UserMgmtScreen --> Admin: Hiển thị kết quả đã lọc
+
+== A2: View User Statistics ==
+Admin -> UserMgmtScreen: Nhấn "Xem thống kê"
+UserMgmtScreen -> Firestore: Lấy user statistics
+note right: users/{userId}/stats\n  - totalLessonsCompleted\n  - totalVocabularyLearned\n  - totalQuizzesCompleted\n  - currentLevel\n  - progressPercentage
+Firestore --> UserMgmtScreen: User statistics
+UserMgmtScreen --> Admin: Hiển thị dialog thống kê
+
+== A3: Bulk Actions ==
+Admin -> UserMgmtScreen: Chọn nhiều users
+Admin -> UserMgmtScreen: Nhấn "Hành động hàng loạt"
+UserMgmtScreen -> UserMgmtScreen: Hiển thị options
+note right: - Vô hiệu hóa hàng loạt\n- Thay đổi role hàng loạt\n- Xóa hàng loạt
+Admin -> UserMgmtScreen: Chọn action
+UserMgmtScreen -> UserMgmtService: Bulk update users
+UserMgmtService -> Firestore: Batch update
+Firestore --> UserMgmtService: Success
+UserMgmtService --> UserMgmtScreen: Success
+UserMgmtScreen --> Admin: Hiển thị "Đã cập nhật X người dùng"
+
+@enduml

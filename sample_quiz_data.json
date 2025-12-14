@@ -1,0 +1,602 @@
+[
+  {
+    "title": "Kiểm tra Ngữ pháp cơ bản - Present Simple",
+    "description": "Bài kiểm tra về thì hiện tại đơn (Present Simple Tense), bao gồm cách chia động từ, cấu trúc câu khẳng định, phủ định và câu hỏi.",
+    "lessonId": null,
+    "category": "Grammar",
+    "difficultyLevel": 1,
+    "timeLimit": 15,
+    "passingScore": 70,
+    "isActive": true,
+    "questions": [
+      {
+        "id": "q1",
+        "question": "Chọn dạng đúng: I ___ to school every day.",
+        "type": "multipleChoice",
+        "options": [
+          "go",
+          "goes",
+          "going",
+          "went"
+        ],
+        "correctAnswer": "go",
+        "correctAnswers": ["go"],
+        "explanation": "Với chủ ngữ 'I', động từ giữ nguyên dạng gốc (go).",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      },
+      {
+        "id": "q2",
+        "question": "Chọn dạng đúng: She ___ coffee every morning.",
+        "type": "multipleChoice",
+        "options": [
+          "drink",
+          "drinks",
+          "drinking",
+          "drank"
+        ],
+        "correctAnswer": "drinks",
+        "correctAnswers": ["drinks"],
+        "explanation": "Với chủ ngữ ngôi thứ ba số ít (she), động từ phải thêm -s hoặc -es. 'drink' → 'drinks'",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      },
+      {
+        "id": "q3",
+        "question": "Chọn câu phủ định đúng:",
+        "type": "multipleChoice",
+        "options": [
+          "I don't like pizza",
+          "I doesn't like pizza",
+          "I not like pizza",
+          "I do not likes pizza"
+        ],
+        "correctAnswer": "I don't like pizza",
+        "correctAnswers": ["I don't like pizza"],
+        "explanation": "Câu phủ định với 'I': I + don't + động từ nguyên thể",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      },
+      {
+        "id": "q4",
+        "question": "Chọn câu hỏi đúng:",
+        "type": "multipleChoice",
+        "options": [
+          "Do you speak English?",
+          "Does you speak English?",
+          "Do you speaks English?",
+          "Does you speaks English?"
+        ],
+        "correctAnswer": "Do you speak English?",
+        "correctAnswers": ["Do you speak English?"],
+        "explanation": "Câu hỏi với 'you': Do + you + động từ nguyên thể",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      },
+      {
+        "id": "q5",
+        "question": "Chọn động từ đúng: He ___ his homework every evening.",
+        "type": "multipleChoice",
+        "options": [
+          "do",
+          "does",
+          "did",
+          "doing"
+        ],
+        "correctAnswer": "does",
+        "correctAnswers": ["does"],
+        "explanation": "Với chủ ngữ 'he' (ngôi thứ ba số ít), động từ 'do' chuyển thành 'does'",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "title": "Từ vựng về Gia đình",
+    "description": "Kiểm tra vốn từ vựng về các thành viên trong gia đình và mối quan hệ gia đình.",
+    "lessonId": null,
+    "category": "Vocabulary",
+    "difficultyLevel": 1,
+    "timeLimit": 10,
+    "passingScore": 60,
+    "isActive": true,
+    "questions": [
+      {
+        "id": "q1",
+        "question": "Từ 'father' có nghĩa là gì?",
+        "type": "multipleChoice",
+        "options": [
+          "Mẹ",
+          "Bố",
+          "Anh trai",
+          "Chị gái"
+        ],
+        "correctAnswer": "Bố",
+        "correctAnswers": ["Bố"],
+        "explanation": "'Father' nghĩa là 'bố, cha' trong tiếng Việt.",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      },
+      {
+        "id": "q2",
+        "question": "Chọn từ đúng: My mother's brother is my ___.",
+        "type": "multipleChoice",
+        "options": [
+          "uncle",
+          "aunt",
+          "cousin",
+          "nephew"
+        ],
+        "correctAnswer": "uncle",
+        "correctAnswers": ["uncle"],
+        "explanation": "'Uncle' nghĩa là chú, bác, cậu - anh/em trai của bố hoặc mẹ.",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      },
+      {
+        "id": "q3",
+        "question": "Chọn từ đúng: My father's mother is my ___.",
+        "type": "multipleChoice",
+        "options": [
+          "grandmother",
+          "grandfather",
+          "aunt",
+          "cousin"
+        ],
+        "correctAnswer": "grandmother",
+        "correctAnswers": ["grandmother"],
+        "explanation": "'Grandmother' nghĩa là bà - mẹ của bố hoặc mẹ.",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      },
+      {
+        "id": "q4",
+        "question": "Điền từ đúng: I have one ___ and two ___. (brother/sister)",
+        "type": "fillInBlank",
+        "options": [],
+        "correctAnswer": "brother, sisters",
+        "correctAnswers": ["brother, sisters"],
+        "explanation": "'Brother' là anh/em trai (số ít), 'sisters' là chị/em gái (số nhiều).",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 15,
+        "metadata": {}
+      },
+      {
+        "id": "q5",
+        "question": "Chọn các từ chỉ thành viên gia đình trực tiếp (nhiều lựa chọn):",
+        "type": "multipleSelect",
+        "options": [
+          "father",
+          "uncle",
+          "mother",
+          "cousin",
+          "brother",
+          "sister"
+        ],
+        "correctAnswer": "father",
+        "correctAnswers": ["father", "mother", "brother", "sister"],
+        "explanation": "Thành viên gia đình trực tiếp gồm: father, mother, brother, sister.",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 15,
+        "metadata": {}
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "title": "Kiểm tra Từ vựng cơ bản",
+    "description": "Bài kiểm tra về các từ vựng tiếng Anh cơ bản nhất, phù hợp cho người mới bắt đầu học.",
+    "lessonId": null,
+    "category": "Vocabulary",
+    "difficultyLevel": 1,
+    "timeLimit": 12,
+    "passingScore": 65,
+    "isActive": true,
+    "questions": [
+      {
+        "id": "q1",
+        "question": "'Hello' nghĩa là gì?",
+        "type": "multipleChoice",
+        "options": [
+          "Xin chào",
+          "Tạm biệt",
+          "Cảm ơn",
+          "Xin lỗi"
+        ],
+        "correctAnswer": "Xin chào",
+        "correctAnswers": ["Xin chào"],
+        "explanation": "'Hello' là lời chào hỏi, nghĩa là 'xin chào'.",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      },
+      {
+        "id": "q2",
+        "question": "Chọn từ đúng: I ___ a book every day.",
+        "type": "multipleChoice",
+        "options": [
+          "read",
+          "red",
+          "ride",
+          "right"
+        ],
+        "correctAnswer": "read",
+        "correctAnswers": ["read"],
+        "explanation": "'Read' nghĩa là 'đọc'. 'Red' là màu đỏ, 'ride' là cưỡi, 'right' là bên phải.",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      },
+      {
+        "id": "q3",
+        "question": "Chọn từ trái nghĩa với 'big':",
+        "type": "multipleChoice",
+        "options": [
+          "small",
+          "large",
+          "huge",
+          "tall"
+        ],
+        "correctAnswer": "small",
+        "correctAnswers": ["small"],
+        "explanation": "'Big' nghĩa là 'lớn, to', trái nghĩa là 'small' (nhỏ).",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      },
+      {
+        "id": "q4",
+        "question": "Điền từ đúng: The ___ is blue. (sky/sea/both)",
+        "type": "multipleChoice",
+        "options": [
+          "sky",
+          "sea",
+          "both",
+          "neither"
+        ],
+        "correctAnswer": "both",
+        "correctAnswers": ["both"],
+        "explanation": "Cả 'sky' (bầu trời) và 'sea' (biển) đều có thể có màu xanh, nên câu đúng là 'both'.",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 15,
+        "metadata": {}
+      },
+      {
+        "id": "q5",
+        "question": "'Thank you' nghĩa là gì?",
+        "type": "multipleChoice",
+        "options": [
+          "Xin chào",
+          "Cảm ơn",
+          "Xin lỗi",
+          "Không có gì"
+        ],
+        "correctAnswer": "Cảm ơn",
+        "correctAnswers": ["Cảm ơn"],
+        "explanation": "'Thank you' nghĩa là 'cảm ơn', dùng để bày tỏ lòng biết ơn.",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "title": "Kiểm tra Đúng/Sai - Ngữ pháp cơ bản",
+    "description": "Bài kiểm tra dạng True/False về các kiến thức ngữ pháp tiếng Anh cơ bản.",
+    "lessonId": null,
+    "category": "Grammar",
+    "difficultyLevel": 1,
+    "timeLimit": 10,
+    "passingScore": 60,
+    "isActive": true,
+    "questions": [
+      {
+        "id": "q1",
+        "question": "Câu sau đúng hay sai: 'I am a student.'",
+        "type": "trueFalse",
+        "options": ["True", "False"],
+        "correctAnswer": "True",
+        "correctAnswers": ["True"],
+        "explanation": "Câu này đúng. Với chủ ngữ 'I', ta dùng 'am' trong thì hiện tại đơn của động từ 'be'.",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      },
+      {
+        "id": "q2",
+        "question": "Câu sau đúng hay sai: 'She go to school.'",
+        "type": "trueFalse",
+        "options": ["True", "False"],
+        "correctAnswer": "False",
+        "correctAnswers": ["False"],
+        "explanation": "Câu này sai. Với chủ ngữ 'she', động từ phải thêm -s: 'She goes to school.'",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      },
+      {
+        "id": "q3",
+        "question": "Câu sau đúng hay sai: 'They are my friends.'",
+        "type": "trueFalse",
+        "options": ["True", "False"],
+        "correctAnswer": "True",
+        "correctAnswers": ["True"],
+        "explanation": "Câu này đúng. Với chủ ngữ số nhiều 'they', ta dùng 'are'.",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      },
+      {
+        "id": "q4",
+        "question": "Câu sau đúng hay sai: 'I doesn't like coffee.'",
+        "type": "trueFalse",
+        "options": ["True", "False"],
+        "correctAnswer": "False",
+        "correctAnswers": ["False"],
+        "explanation": "Câu này sai. Với chủ ngữ 'I', phải dùng 'don't', không dùng 'doesn't'. Câu đúng là 'I don't like coffee.'",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 15,
+        "metadata": {}
+      },
+      {
+        "id": "q5",
+        "question": "Câu sau đúng hay sai: 'Do you speak English?'",
+        "type": "trueFalse",
+        "options": ["True", "False"],
+        "correctAnswer": "True",
+        "correctAnswers": ["True"],
+        "explanation": "Câu này đúng. Đây là câu hỏi đúng cấu trúc với 'Do + you + động từ nguyên thể'.",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      },
+      {
+        "id": "q6",
+        "question": "Câu sau đúng hay sai: 'He play football.'",
+        "type": "trueFalse",
+        "options": ["True", "False"],
+        "correctAnswer": "False",
+        "correctAnswers": ["False"],
+        "explanation": "Câu này sai. Với chủ ngữ 'he', động từ phải thêm -s: 'He plays football.'",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "title": "Kiểm tra từ vựng về Màu sắc và Số đếm",
+    "description": "Bài kiểm tra về từ vựng màu sắc cơ bản và số đếm từ 1 đến 10.",
+    "lessonId": null,
+    "category": "Vocabulary",
+    "difficultyLevel": 1,
+    "timeLimit": 10,
+    "passingScore": 70,
+    "isActive": true,
+    "questions": [
+      {
+        "id": "q1",
+        "question": "Màu 'red' là màu gì?",
+        "type": "multipleChoice",
+        "options": [
+          "Màu xanh",
+          "Màu đỏ",
+          "Màu vàng",
+          "Màu đen"
+        ],
+        "correctAnswer": "Màu đỏ",
+        "correctAnswers": ["Màu đỏ"],
+        "explanation": "'Red' nghĩa là màu đỏ.",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      },
+      {
+        "id": "q2",
+        "question": "Số 'three' là số mấy?",
+        "type": "multipleChoice",
+        "options": [
+          "2",
+          "3",
+          "4",
+          "5"
+        ],
+        "correctAnswer": "3",
+        "correctAnswers": ["3"],
+        "explanation": "'Three' nghĩa là số 3.",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      },
+      {
+        "id": "q3",
+        "question": "Chọn màu xanh dương:",
+        "type": "multipleChoice",
+        "options": [
+          "green",
+          "blue",
+          "yellow",
+          "purple"
+        ],
+        "correctAnswer": "blue",
+        "correctAnswers": ["blue"],
+        "explanation": "'Blue' nghĩa là màu xanh dương.",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      },
+      {
+        "id": "q4",
+        "question": "Chọn các số lẻ (nhiều lựa chọn):",
+        "type": "multipleSelect",
+        "options": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five"
+        ],
+        "correctAnswer": "one",
+        "correctAnswers": ["one", "three", "five"],
+        "explanation": "Các số lẻ là: one (1), three (3), five (5).",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 15,
+        "metadata": {}
+      },
+      {
+        "id": "q5",
+        "question": "'Green' nghĩa là gì?",
+        "type": "multipleChoice",
+        "options": [
+          "Màu xanh lá",
+          "Màu xanh dương",
+          "Màu vàng",
+          "Màu đỏ"
+        ],
+        "correctAnswer": "Màu xanh lá",
+        "correctAnswers": ["Màu xanh lá"],
+        "explanation": "'Green' nghĩa là màu xanh lá cây.",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "title": "Kiểm tra từ vựng về Hành động",
+    "description": "Bài kiểm tra về các động từ chỉ hành động cơ bản như ăn, uống, đi, đến, ngủ...",
+    "lessonId": null,
+    "category": "Vocabulary",
+    "difficultyLevel": 1,
+    "timeLimit": 12,
+    "passingScore": 65,
+    "isActive": true,
+    "questions": [
+      {
+        "id": "q1",
+        "question": "'Eat' nghĩa là gì?",
+        "type": "multipleChoice",
+        "options": [
+          "Uống",
+          "Ăn",
+          "Ngủ",
+          "Chạy"
+        ],
+        "correctAnswer": "Ăn",
+        "correctAnswers": ["Ăn"],
+        "explanation": "'Eat' nghĩa là 'ăn' - đưa thức ăn vào miệng và nuốt.",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      },
+      {
+        "id": "q2",
+        "question": "Chọn từ đúng: I ___ water every day.",
+        "type": "multipleChoice",
+        "options": [
+          "eat",
+          "drink",
+          "sleep",
+          "run"
+        ],
+        "correctAnswer": "drink",
+        "correctAnswers": ["drink"],
+        "explanation": "'Drink' nghĩa là 'uống'. Ta uống nước (drink water), không phải ăn nước.",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      },
+      {
+        "id": "q3",
+        "question": "Điền từ đúng: I ___ 8 hours every night.",
+        "type": "fillInBlank",
+        "options": [],
+        "correctAnswer": "sleep",
+        "correctAnswers": ["sleep"],
+        "explanation": "'Sleep' nghĩa là 'ngủ'. Câu này có nghĩa là 'Tôi ngủ 8 giờ mỗi đêm.'",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 15,
+        "metadata": {}
+      },
+      {
+        "id": "q4",
+        "question": "Chọn từ trái nghĩa với 'go':",
+        "type": "multipleChoice",
+        "options": [
+          "come",
+          "stay",
+          "leave",
+          "walk"
+        ],
+        "correctAnswer": "come",
+        "correctAnswers": ["come"],
+        "explanation": "'Go' nghĩa là 'đi (đến nơi khác)', trái nghĩa là 'come' (đến nơi đây).",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 10,
+        "metadata": {}
+      },
+      {
+        "id": "q5",
+        "question": "Chọn các động từ chỉ hành động thể chất (nhiều lựa chọn):",
+        "type": "multipleSelect",
+        "options": [
+          "eat",
+          "think",
+          "run",
+          "jump",
+          "sleep"
+        ],
+        "correctAnswer": "eat",
+        "correctAnswers": ["eat", "run", "jump", "sleep"],
+        "explanation": "Các động từ chỉ hành động thể chất: eat (ăn), run (chạy), jump (nhảy), sleep (ngủ). 'Think' (nghĩ) là hành động tinh thần.",
+        "imageUrl": null,
+        "audioUrl": null,
+        "points": 15,
+        "metadata": {}
+      }
+    ],
+    "metadata": {}
+  }
+]

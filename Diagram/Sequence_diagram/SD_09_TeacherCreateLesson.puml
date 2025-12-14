@@ -1,0 +1,215 @@
+@startuml SD_09_TeacherCreateLesson - Sequence Diagram: Giáo viên tạo bài học
+
+title Sequence Diagram: Giáo viên tạo bài học (Teacher Create Lesson)
+
+actor "Giáo viên\n(Teacher)" as Teacher
+participant "Teacher Dashboard" as TeacherDashboard
+participant "Create Lesson Screen" as CreateScreen
+participant "Media Upload Widget" as MediaWidget
+participant "Cloudinary Service" as CloudinaryService
+participant "Lesson Service" as LessonService
+participant "Vocabulary Service" as VocabService
+participant "Firestore" as Firestore
+
+== Main Flow ==
+
+Teacher -> TeacherDashboard: 1. Mở Teacher Dashboard
+activate TeacherDashboard
+
+TeacherDashboard --> Teacher: 2. Hiển thị dashboard
+
+Teacher -> TeacherDashboard: 3. Nhấn "Quản lý Bài học"
+TeacherDashboard -> CreateScreen: 4. Navigate to Lesson Management
+deactivate TeacherDashboard
+
+Teacher -> CreateScreen: 5. Nhấn "Tạo bài học mới"
+activate CreateScreen
+
+CreateScreen --> Teacher: 6. Hiển thị form tạo bài học
+
+Teacher -> CreateScreen: 7. Nhập thông tin cơ bản
+note right: - Title (bắt buộc)\n- Description\n- Category\n- Difficulty Level\n- Objectives
+
+CreateScreen -> CreateScreen: 8. Validate basic info
+
+alt Thông tin hợp lệ
+    Teacher -> CreateScreen: 9. Thêm sections
+    
+    loop Cho mỗi section
+        Teacher -> CreateScreen: 10. Nhấn "Thêm section"
+        CreateScreen -> CreateScreen: 11. Hiển thị form section
+        note right: - Section title\n- Section type (video/audio/text)\n- Content\n- Order
+        
+        Teacher -> CreateScreen: 12. Chọn section type
+        
+        alt Section type: Video
+            Teacher -> CreateScreen: 13. Nhấn "Upload video"
+            CreateScreen -> MediaWidget: 14. Hiển thị media upload widget
+            activate MediaWidget
+            
+            Teacher -> MediaWidget: 15. Chọn video file
+            MediaWidget -> MediaWidget: 16. Validate file
+            note right: - Format: mp4, mov, avi, mkv\n- Max size: 100MB
+            
+            alt File hợp lệ
+                MediaWidget -> CloudinaryService: 17. uploadVideo(file, folder, options)
+                activate CloudinaryService
+                
+                CloudinaryService -> CloudinaryService: 18. Upload video lên Cloudinary
+                note right: - Upload to lesson_videos folder\n- Generate optimized URL\n- Create transformations
+                
+                CloudinaryService --> MediaWidget: 19. Video URL (optimizedUrl)
+                deactivate CloudinaryService
+                
+                MediaWidget -> CreateScreen: 20. onUploadComplete(videoUrl)
+                CreateScreen -> CreateScreen: 21. Lưu video URL vào section
+                MediaWidget --> Teacher: 22. Hiển thị "Video đã được tải lên thành công!"
+            else File không hợp lệ
+                MediaWidget --> Teacher: 19. Hiển thị lỗi "File không hợp lệ"
+            end
+            deactivate MediaWidget
+            
+        else Section type: Audio
+            Teacher -> CreateScreen: 13. Nhấn "Upload audio"
+            CreateScreen -> MediaWidget: 14. Hiển thị media upload widget
+            activate MediaWidget
+            
+            Teacher -> MediaWidget: 15. Chọn audio file
+            MediaWidget -> MediaWidget: 16. Validate file
+            note right: - Format: mp3, wav, m4a, aac\n- Max size: 20MB
+            
+            alt File hợp lệ
+                MediaWidget -> CloudinaryService: 17. uploadAudio(file, folder, options)
+                activate CloudinaryService
+                
+                CloudinaryService -> CloudinaryService: 18. Upload audio lên Cloudinary
+                note right: - Upload to lesson_audio folder\n- Generate optimized URL
+                
+                CloudinaryService --> MediaWidget: 19. Audio URL (optimizedUrl)
+                deactivate CloudinaryService
+                
+                MediaWidget -> CreateScreen: 20. onUploadComplete(audioUrl)
+                CreateScreen -> CreateScreen: 21. Lưu audio URL vào section
+                MediaWidget --> Teacher: 22. Hiển thị "Âm thanh đã được tải lên thành công!"
+            else File không hợp lệ
+                MediaWidget --> Teacher: 19. Hiển thị lỗi "File không hợp lệ"
+            end
+            deactivate MediaWidget
+            
+        else Section type: Text
+            Teacher -> CreateScreen: 13. Nhập nội dung text
+            CreateScreen -> CreateScreen: 14. Lưu text content vào section
+        end
+        
+        Teacher -> CreateScreen: 15. Nhấn "Lưu section"
+        CreateScreen -> CreateScreen: 16. Thêm section vào sections list
+    end
+    
+    Teacher -> CreateScreen: 17. Thêm từ vựng liên quan
+    
+    CreateScreen -> VocabService: 18. getAllVocabulary() hoặc searchVocabulary()
+    activate VocabService
+    VocabService -> Firestore: 19. Lấy danh sách từ vựng
+    activate Firestore
+    Firestore --> VocabService: 20. List<VocabularyModel>
+    deactivate Firestore
+    VocabService --> CreateScreen: 21. List vocabularies
+    deactivate VocabService
+    
+    CreateScreen --> Teacher: 22. Hiển thị danh sách từ vựng
+    Teacher -> CreateScreen: 23. Chọn từ vựng liên quan
+    note right: Có thể chọn nhiều từ vựng
+    
+    CreateScreen -> CreateScreen: 24. Lưu vocabularyIds vào lesson
+    
+    Teacher -> CreateScreen: 25. (Tùy chọn) Upload thumbnail image
+    
+    alt Có upload thumbnail
+        Teacher -> CreateScreen: 26. Nhấn "Upload thumbnail"
+        CreateScreen -> MediaWidget: 27. Hiển thị media upload widget
+        activate MediaWidget
+        
+        Teacher -> MediaWidget: 28. Chọn image file
+        MediaWidget -> CloudinaryService: 29. uploadImage(file, folder)
+        activate CloudinaryService
+        CloudinaryService -> CloudinaryService: 30. Upload image lên Cloudinary
+        CloudinaryService --> MediaWidget: 31. Image URL
+        deactivate CloudinaryService
+        MediaWidget -> CreateScreen: 32. onUploadComplete(imageUrl)
+        CreateScreen -> CreateScreen: 33. Lưu imageUrl
+        deactivate MediaWidget
+    end
+    
+    Teacher -> CreateScreen: 34. Nhấn "Lưu bài học"
+    
+    CreateScreen -> CreateScreen: 35. Validate form
+    note right: - Title không rỗng\n- Có ít nhất 1 section\n- Category và Difficulty đã chọn
+    
+    alt Form hợp lệ
+        CreateScreen -> CreateScreen: 36. Tạo LessonModel object
+        note right: - id: auto-generated\n- title\n- description\n- category\n- difficultyLevel\n- objectives\n- sections[]\n- vocabularyIds[]\n- imageUrl\n- createdBy: teacherId\n- createdAt: now\n- isActive: true
+        
+        CreateScreen -> LessonService: 37. createLesson(lessonData)
+        activate LessonService
+        
+        LessonService -> Firestore: 38. Tạo lesson document
+        activate Firestore
+        note right: lessons/{lessonId}\n  - All lesson fields\n  - createdBy: teacherId\n  - createdAt\n  - isActive: true
+        Firestore --> LessonService: 39. Success + lessonId
+        deactivate Firestore
+        
+        LessonService --> CreateScreen: 40. Success + LessonModel
+        deactivate LessonService
+        
+        CreateScreen -> CreateScreen: 41. Hiển thị thông báo thành công
+        note right: "Đã tạo bài học thành công!"
+        
+        CreateScreen -> CreateScreen: 42. (Tùy chọn) Reset form hoặc quay lại
+        
+        CreateScreen -> TeacherDashboard: 43. Navigate back to Dashboard
+        activate TeacherDashboard
+        TeacherDashboard -> TeacherDashboard: 44. Refresh lesson list
+        TeacherDashboard --> Teacher: 45. Hiển thị dashboard với bài học mới
+        
+    else Form không hợp lệ
+        CreateScreen --> Teacher: 37. Hiển thị lỗi validation
+        note right: - "Vui lòng nhập tiêu đề"\n- "Vui lòng thêm ít nhất 1 section"\n- "Vui lòng chọn category"
+    end
+    
+else Thông tin không hợp lệ
+    CreateScreen --> Teacher: 9. Hiển thị lỗi validation
+end
+
+deactivate CreateScreen
+deactivate TeacherDashboard
+
+== Alternative Flows ==
+
+== A1: Xóa section ==
+Teacher -> CreateScreen: Nhấn "Xóa" trên section
+CreateScreen -> CreateScreen: Xóa section khỏi list
+CreateScreen --> Teacher: Cập nhật UI
+
+== A2: Sắp xếp lại sections ==
+Teacher -> CreateScreen: Kéo thả để sắp xếp
+CreateScreen -> CreateScreen: Cập nhật order của sections
+CreateScreen --> Teacher: Cập nhật UI
+
+== A3: Upload media thất bại ==
+CloudinaryService -> MediaWidget: Error: Upload failed
+MediaWidget -> CreateScreen: onError(error message)
+CreateScreen --> Teacher: Hiển thị lỗi "Tải lên media thất bại: {error}"
+
+== A4: Edit bài học đã tạo ==
+Teacher -> CreateScreen: Chọn bài học để edit
+CreateScreen -> Firestore: Lấy lesson data
+Firestore --> CreateScreen: LessonModel
+CreateScreen --> Teacher: Hiển thị form với data đã có
+Teacher -> CreateScreen: Chỉnh sửa thông tin
+CreateScreen -> LessonService: updateLesson(lessonId, lessonData)
+LessonService -> Firestore: Update lesson document
+Firestore --> LessonService: Success
+LessonService --> CreateScreen: Success
+CreateScreen --> Teacher: Hiển thị "Đã cập nhật bài học thành công!"
+
+@enduml
