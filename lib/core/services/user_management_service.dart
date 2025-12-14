@@ -165,6 +165,7 @@ class UserManagementService {
       final activeUsers = users.where((user) => user.isActive).length;
       final inactiveUsers = totalUsers - activeUsers;
       final adminUsers = users.where((user) => user.isAdmin).length;
+      final teacherUsers = users.where((user) => user.isTeacher).length;
       final regularUsers = users.where((user) => user.isUser).length;
 
       // Calculate new users this month
@@ -199,6 +200,7 @@ class UserManagementService {
         'activeUsers': activeUsers,
         'inactiveUsers': inactiveUsers,
         'adminUsers': adminUsers,
+        'teacherUsers': teacherUsers,
         'regularUsers': regularUsers,
         'newUsersThisMonth': newUsersThisMonth,
         'averageProgress': avgProgress,
@@ -214,6 +216,7 @@ class UserManagementService {
         'activeUsers': 0,
         'inactiveUsers': 0,
         'adminUsers': 0,
+        'teacherUsers': 0,
         'regularUsers': 0,
         'newUsersThisMonth': 0,
         'averageProgress': 0.0,

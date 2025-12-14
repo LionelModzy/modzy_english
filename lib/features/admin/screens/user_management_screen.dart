@@ -24,7 +24,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
   String _selectedStatus = 'Tất cả';
   Map<String, dynamic> _userStats = {};
 
-  final List<String> _roleOptions = ['Tất cả', 'Người dùng', 'Quản trị viên'];
+  final List<String> _roleOptions = ['Tất cả', 'Người dùng', 'Giáo viên', 'Quản trị viên'];
   final List<String> _statusOptions = ['Tất cả', 'Hoạt động', 'Tạm dừng'];
 
   @override
@@ -84,6 +84,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
       // Role filter
       final matchesRole = _selectedRole == 'Tất cả' ||
           (_selectedRole == 'Quản trị viên' && user.isAdmin) ||
+          (_selectedRole == 'Giáo viên' && user.isTeacher) ||
           (_selectedRole == 'Người dùng' && user.isUser);
 
       // Status filter
@@ -448,11 +449,19 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: user.isAdmin ? AppColors.warning : AppColors.primary,
+                            color: user.isAdmin 
+                                ? AppColors.warning 
+                                : user.isTeacher 
+                                    ? AppColors.accent 
+                                    : AppColors.primary,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            user.isAdmin ? 'Quản trị' : 'Người dùng',
+                            user.isAdmin 
+                                ? 'Quản trị' 
+                                : user.isTeacher 
+                                    ? 'Giáo viên' 
+                                    : 'Người dùng',
                             style: const TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
@@ -600,14 +609,22 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
                     ? null  // Disable button if this is current user
                     : () => _showRoleChangeDialog(user),
                   icon: Icon(
-                    Icons.admin_panel_settings, 
+                    user.isAdmin 
+                        ? Icons.admin_panel_settings 
+                        : user.isTeacher 
+                            ? Icons.school 
+                            : Icons.person,
                     size: 14,
                     color: _isCurrentUser(user) ? Colors.grey : Colors.white,
                   ),
                   label: Text(
                     _isCurrentUser(user) 
                       ? 'Tài khoản hiện tại'
-                      : (user.isAdmin ? 'Hủy Admin' : 'Đặt Admin'),
+                      : (user.isAdmin 
+                          ? 'Thay đổi vai trò' 
+                          : user.isTeacher 
+                              ? 'Thay đổi vai trò' 
+                              : 'Thay đổi vai trò'),
                     style: TextStyle(
                       fontSize: 11,
                       color: _isCurrentUser(user) ? Colors.grey : Colors.white,
@@ -616,7 +633,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _isCurrentUser(user) 
                       ? Colors.grey.shade300
-                      : (user.isAdmin ? AppColors.error : AppColors.primary),
+                      : (user.isAdmin 
+                          ? AppColors.warning 
+                          : user.isTeacher 
+                              ? AppColors.accent 
+                              : AppColors.primary),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 6),
                   ),
@@ -665,7 +686,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
             children: [
               _buildDetailRow('Email', user.email),
               _buildDetailRow('UID', user.uid),
-              _buildDetailRow('Vai trò', user.isAdmin ? 'Quản trị viên' : 'Người dùng'),
+              _buildDetailRow('Vai trò', 
+                user.isAdmin 
+                    ? 'Quản trị viên' 
+                    : user.isTeacher 
+                        ? 'Giáo viên' 
+                        : 'Người dùng'),
               _buildDetailRow('Trạng thái', user.isActive ? 'Hoạt động' : 'Tạm dừng'),
               _buildDetailRow('Cấp độ', '${user.currentLevel} (${user.levelName})'),
               _buildDetailRow('Tiến độ', '${user.progressPercentage.toStringAsFixed(1)}%'),
@@ -756,64 +782,111 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
       return;
     }
 
-    final newRole = user.isAdmin ? 'user' : 'admin';
-    final roleText = user.isAdmin ? 'người dùng thường' : 'quản trị viên';
+    String? selectedRole = user.role;
     
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Thay đổi vai trò'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Bạn có chắc chắn muốn đổi vai trò của ${user.displayName} thành $roleText?',
-            ),
-            const SizedBox(height: 8),
-            if (newRole == 'admin')
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.warning.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.warning.withOpacity(0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.warning_rounded, color: AppColors.warning, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Cấp quyền admin sẽ cho phép người dùng này truy cập tất cả chức năng quản trị.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.warning,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Thay đổi vai trò'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Chọn vai trò cho ${user.displayName}:',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
+              const SizedBox(height: 16),
+              RadioListTile<String>(
+                title: const Text('Người dùng'),
+                value: 'user',
+                groupValue: selectedRole,
+                onChanged: (value) {
+                  setDialogState(() {
+                    selectedRole = value;
+                  });
+                },
+                contentPadding: EdgeInsets.zero,
+              ),
+              RadioListTile<String>(
+                title: const Text('Giáo viên'),
+                subtitle: const Text('Có thể quản lý nội dung học tập'),
+                value: 'teacher',
+                groupValue: selectedRole,
+                onChanged: (value) {
+                  setDialogState(() {
+                    selectedRole = value;
+                  });
+                },
+                contentPadding: EdgeInsets.zero,
+              ),
+              RadioListTile<String>(
+                title: const Text('Quản trị viên'),
+                subtitle: const Text('Có quyền truy cập tất cả chức năng'),
+                value: 'admin',
+                groupValue: selectedRole,
+                onChanged: (value) {
+                  setDialogState(() {
+                    selectedRole = value;
+                  });
+                },
+                contentPadding: EdgeInsets.zero,
+              ),
+              const SizedBox(height: 8),
+              if (selectedRole == 'admin')
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_rounded, color: AppColors.warning, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Cấp quyền admin sẽ cho phép người dùng này truy cập tất cả chức năng quản trị.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.warning,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Hủy'),
+            ),
+            ElevatedButton(
+              onPressed: selectedRole == null || selectedRole == user.role
+                  ? null
+                  : () async {
+                      Navigator.pop(context);
+                      await _changeUserRole(user, selectedRole!);
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: selectedRole == 'admin' 
+                    ? AppColors.warning 
+                    : selectedRole == 'teacher'
+                        ? AppColors.accent
+                        : AppColors.primary,
+              ),
+              child: const Text('Xác nhận'),
+            ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await _changeUserRole(user, newRole);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: newRole == 'admin' ? AppColors.warning : AppColors.error,
-            ),
-            child: const Text('Xác nhận'),
-          ),
-        ],
       ),
     );
   }
